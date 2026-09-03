@@ -46,7 +46,8 @@ module.exports = async (req, res) => {
       if (fromId) {
         recordOrder(fromId, {
           title: 'Тестовая покупка',
-          amountStars: payment.total_amount,
+          amount: payment.total_amount,
+          currency: 'XTR',
         });
       }
 

@@ -921,6 +921,38 @@
 
   function renderOrderHistory(){
     const wrap = document.getElementById('orderHistoryList');
+
+    // Реальные заказы проверенного аккаунта — приоритет.
+    const realOrders = verifiedUser && Array.isArray(verifiedUser.orders) ? verifiedUser.orders : null;
+
+    if (realOrders && realOrders.length > 0) {
+      wrap.innerHTML = realOrders.map(o => {
+        const dateStr = new Date(o.date).toLocaleDateString('ru-RU', { day:'2-digit', month:'short', year:'numeric' });
+        const currencySign = o.currency === 'XTR' ? '⭐' : '₽';
+        const st = o.currency === 'XTR' ? statusMeta.done : { label:'Оформлен', cls:'active' };
+        return `
+        <div class="order-row">
+          <div class="order-icon">🧾</div>
+          <div class="order-info">
+            <div class="order-name">${o.title}</div>
+            <div class="order-meta">${dateStr}</div>
+          </div>
+          <div class="order-right">
+            <div class="order-price">${fmt(o.amount)} ${currencySign}</div>
+            <div class="chip ${st.cls}">${st.label}</div>
+          </div>
+        </div>`;
+      }).join('');
+      return;
+    }
+
+    if (realOrders && realOrders.length === 0) {
+      wrap.innerHTML = `<div class="empty-block"><div class="emoji">🧾</div>Заказов пока нет</div>`;
+      return;
+    }
+
+    // Фолбэк на демо-данные — например, если открыли вне Telegram и
+    // verifiedUser ещё не подтянулся.
     if (ORDER_HISTORY.length === 0) {
       wrap.innerHTML = `<div class="empty-block"><div class="emoji">🧾</div>Заказов пока нет</div>`;
       return;
@@ -1085,12 +1117,34 @@
     }
   }
 
-  function completeOrder(){
+  async function completeOrder(){
     try { if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success'); } catch(e){}
-    showToast('✅ Заказ оформлен! Доступ придёт в чат с ботом');
+
+    const items = Object.entries(cart).map(([id, qty]) => ({ id, qty }));
+
     cart = {};
     onCartChange();
     closeCart();
+
+    if (tg && tg.initData) {
+      try {
+        const res = await fetch('/api/record-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData: tg.initData, items }),
+        });
+        const data = await res.json();
+        if (data && data.ok) {
+          showToast('✅ Заказ оформлен! Подтверждение пришло в чат');
+          authWithServer();
+          if (currentPage === 'orders') { renderActiveSubs(); renderOrderHistory(); }
+          return;
+        }
+      } catch (e) {
+        // сеть недоступна — покажем обычное подтверждение ниже
+      }
+    }
+    showToast('✅ Заказ оформлен! Доступ придёт в чат с ботом');
   }
 
   // ---------------- DETAIL SHEET ----------------
