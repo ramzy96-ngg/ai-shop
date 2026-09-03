@@ -1199,8 +1199,30 @@
     if (card) openDetail(card.dataset.id);
   });
 
-  document.getElementById('topupBtn').addEventListener('click', () => {
-    showToast('Пополнение через СБП/карту — демо');
+  document.getElementById('topupBtn').addEventListener('click', async () => {
+    if (!tg || !tg.initData || !tg.openInvoice) {
+      showToast('Открой мини-апп внутри Telegram, чтобы протестировать оплату');
+      return;
+    }
+    try {
+      const res = await fetch('/api/create-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: tg.initData }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        showToast('Не удалось создать счёт: ' + (data.error || 'ошибка'));
+        return;
+      }
+      tg.openInvoice(data.invoiceLink, (status) => {
+        if (status === 'paid') showToast('✅ Оплата прошла!');
+        else if (status === 'cancelled') showToast('Оплата отменена');
+        else if (status === 'failed') showToast('Оплата не прошла');
+      });
+    } catch (e) {
+      showToast('Ошибка сети при создании счёта');
+    }
   });
 
   cartBody.addEventListener('click', (e) => {
