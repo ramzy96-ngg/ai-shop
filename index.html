@@ -612,9 +612,9 @@
     </div>
 
     <div class="stat-row">
-      <div class="stat-tile"><div class="stat-value">2</div><div class="stat-label">Активно</div></div>
-      <div class="stat-tile"><div class="stat-value">7</div><div class="stat-label">Заказов</div></div>
-      <div class="stat-tile"><div class="stat-value">12 340</div><div class="stat-label">Потрачено ₽</div></div>
+      <div class="stat-tile"><div class="stat-value" id="statActive">0</div><div class="stat-label">Активно</div></div>
+      <div class="stat-tile"><div class="stat-value" id="statOrders">0</div><div class="stat-label">Заказов</div></div>
+      <div class="stat-tile"><div class="stat-value" id="statSpent">0</div><div class="stat-label">Потрачено ⭐</div></div>
     </div>
 
     <div class="menu-list">
@@ -707,6 +707,12 @@
         if (typeof data.user.balance === 'number') {
           document.getElementById('starBalance').textContent = fmt(data.user.balance);
           document.getElementById('profileBalance').textContent = fmt(data.user.balance);
+        }
+        if (typeof data.user.ordersCount === 'number') {
+          document.getElementById('statOrders').textContent = fmt(data.user.ordersCount);
+        }
+        if (typeof data.user.totalSpentStars === 'number') {
+          document.getElementById('statSpent').textContent = fmt(data.user.totalSpentStars);
         }
       }
     } catch (e) {
@@ -1216,7 +1222,14 @@
         return;
       }
       tg.openInvoice(data.invoiceLink, (status) => {
-        if (status === 'paid') showToast('✅ Оплата прошла!');
+        if (status === 'paid') {
+          showToast('✅ Оплата прошла!');
+          // Вебхук на сервере обрабатывается параллельно и может занять
+          // долю секунды — обновляем статистику с небольшой задержкой,
+          // чтобы запись о заказе точно успела попасть в аккаунт.
+          authWithServer();
+          setTimeout(authWithServer, 1500);
+        }
         else if (status === 'cancelled') showToast('Оплата отменена');
         else if (status === 'failed') showToast('Оплата не прошла');
       });
