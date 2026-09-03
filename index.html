@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AI Shop</title>
+<link rel="icon" href="data:,">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0a0a0b;
+    --bg-raise: #16171a;
+    --bg-raise-2: #1f2024;
+    --bg-input: #131417;
+    --border: rgba(255,255,255,0.09);
+    --border-soft: rgba(255,255,255,0.06);
+    --text: #f4f4f1;
+    --text-dim: #9d9da5;
+    --text-faint: #6b6c73;
+    --accent: #d7ff3e;
+    --accent-dim: rgba(215,255,62,0.14);
+    --accent-ink: #10130a;
+    --danger: #ff5c5c;
+    --danger-dim: rgba(255,92,92,0.15);
+    --success: #6ee787;
+    --success-dim: rgba(110,231,135,0.14);
+    --warn: #ffb454;
+    --warn-dim: rgba(255,180,84,0.14);
+    --radius-lg: 18px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+    --font-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  ::selection{ background: var(--accent); color: var(--accent-ink); }
+
+  html,body{
+    margin:0; padding:0; min-height:100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    overscroll-behavior-y: none;
+  }
+
+  #app{ min-height:100vh; padding-bottom: 100px; position:relative; }
+
+  #app::before{
+    content:"";
+    position:absolute; top:-120px; left:50%; transform:translateX(-50%);
+    width:520px; height:320px;
+    background: radial-gradient(ellipse at center, rgba(215,255,62,0.16), transparent 70%);
+    pointer-events:none; z-index:0;
+  }
+
+  h1,h2,h3{ font-family: var(--font-display); margin:0; }
+
+  /* ---------- Announcement bar ---------- */
+  .announce{
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 12.5px; font-weight:700;
+    padding: 8px 14px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    text-align:center;
+    position:relative; z-index:5;
+  }
+  .announce span.dim{ font-weight:600; opacity:.75; }
+  .announce-close{
+    position:absolute; right:12px; top:50%; transform:translateY(-50%);
+    font-size:15px; font-weight:800; opacity:.65; cursor:pointer; line-height:1;
+    padding:2px 4px;
+  }
+  .announce.hidden{ display:none; }
+
+  /* ---------- Header ---------- */
+  .topbar{
+    position: sticky; top:0; z-index: 20;
+    background: rgba(10,10,11,0.88);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 16px 18px 12px;
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .brand{ display:flex; align-items:center; gap:10px; }
+  .brand .logo{
+    width:36px; height:36px; border-radius:10px;
+    background: var(--accent);
+    display:flex; align-items:center; justify-content:center;
+    color: var(--accent-ink);
+  }
+  .brand-title{
+    font-family: var(--font-display); font-weight:900;
+    font-size:16.5px; letter-spacing:0.01em; line-height:1;
+  }
+  .brand-sub{ font-size:11px; color: var(--text-faint); margin-top:3px; }
+  .balance-pill{
+    display:flex; align-items:center; gap:6px;
+    background: var(--bg-raise);
+    border: 1px solid var(--border);
+    padding:7px 12px; border-radius:20px;
+    font-size:13px; font-weight:700;
+    font-variant-numeric: tabular-nums;
+  }
+  .balance-pill .star{ color: var(--accent); }
+
+  /* ---------- Search / tabs ---------- */
+  .searchbar{
+    margin: 14px 18px 0;
+    background: var(--bg-raise);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 11px 14px;
+    display:flex; align-items:center; gap:9px;
+    color: var(--text-faint);
+    font-size: 13.5px;
+  }
+  .searchbar svg{ flex:0 0 auto; }
+  .searchbar input{
+    flex:1; min-width:0;
+    background:none; border:none; outline:none;
+    color: var(--text); font-family: var(--font-body); font-size:13.5px;
+  }
+  .searchbar input::placeholder{ color: var(--text-faint); }
+  .search-clear{
+    flex:0 0 auto; font-size:11px; color: var(--text-faint);
+    padding:3px 5px; cursor:pointer;
+  }
+  .search-empty{
+    text-align:center; padding: 34px 20px; color: var(--text-faint);
+    background: var(--bg-raise); border:1px solid var(--border-soft); border-radius: var(--radius-md);
+    margin: 4px 18px 0; font-size:13px;
+  }
+  .tabs{
+    display:flex; gap:8px; overflow-x:auto;
+    padding: 16px 18px 4px;
+    scrollbar-width:none;
+    position:relative; z-index:1;
+  }
+  .tabs::-webkit-scrollbar{ display:none; }
+  .tab{
+    flex:0 0 auto;
+    padding: 8px 15px;
+    border-radius: 20px;
+    background: var(--bg-raise);
+    color: var(--text-dim);
+    font-size: 13px; font-weight:700;
+    white-space:nowrap;
+    border:1px solid var(--border-soft);
+    transition: all .15s ease;
+  }
+  .tab.active{
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: transparent;
+  }
+
+  /* ---------- Promo banner ---------- */
+  .promo{
+    margin: 16px 18px 4px;
+    border-radius: var(--radius-lg);
+    padding: 18px;
+    background: var(--bg-raise);
+    border: 1px solid var(--border);
+    position:relative;
+    overflow:hidden;
+    z-index:1;
+  }
+  .promo::after{
+    content:"";
+    position:absolute; right:-30px; top:-30px;
+    width:140px; height:140px; border-radius:50%;
+    background: radial-gradient(circle, rgba(215,255,62,0.22), transparent 70%);
+  }
+  .promo-eyebrow{
+    font-size:10.5px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase;
+    color: var(--accent); margin-bottom:8px;
+  }
+  .promo-title{ font-family: var(--font-display); font-size:19px; font-weight:900; margin-bottom:4px; letter-spacing:-0.01em; }
+  .promo-sub{ font-size:12.5px; color: var(--text-dim); max-width:80%; line-height:1.4; }
+
+  /* ---------- Section ---------- */
+  .section{ padding: 22px 18px 4px; position:relative; z-index:1; }
+  .section-head{
+    display:flex; align-items:baseline; justify-content:space-between;
+    margin-bottom:12px;
+  }
+  .section-title{ font-family: var(--font-display); font-size:17px; font-weight:800; letter-spacing:-0.01em; }
+  .section-link{ font-size:12.5px; color: var(--text-faint); font-weight:600; }
+
+  /* ---------- Product grid ---------- */
+  .grid{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+  .card{
+    background: var(--bg-raise);
+    border-radius: var(--radius-md);
+    padding: 13px;
+    border: 1px solid var(--border-soft);
+    display:flex; flex-direction:column; gap:9px;
+    position:relative;
+    transition: border-color .15s ease;
+  }
+  .card:active{ border-color: var(--border); }
+  .card-icon{
+    width:38px; height:38px; border-radius:11px;
+    background: var(--bg-raise-2);
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px;
+  }
+  .card-badge{
+    position:absolute; top:11px; right:11px;
+    background: var(--danger-dim); color: var(--danger);
+    font-size:9.5px; font-weight:800;
+    padding:3px 7px; border-radius:7px;
+  }
+  .card-name{ font-size:13.5px; font-weight:700; line-height:1.25; }
+  .card-desc{ font-size:11px; color: var(--text-faint); line-height:1.4; min-height:28px; }
+  .card-bottom{ display:flex; align-items:center; justify-content:space-between; margin-top:2px; }
+  .price-block{ display:flex; flex-direction:column; }
+  .price{ font-size:14px; font-weight:800; font-variant-numeric: tabular-nums; }
+  .price .unit{ color: var(--text-faint); font-weight:500; font-size:10.5px; }
+  .price-old{ font-size:10.5px; color: var(--text-faint); text-decoration: line-through; font-variant-numeric: tabular-nums; }
+  .add-btn{
+    width:30px; height:30px; border-radius:9px;
+    background: var(--accent); color: var(--accent-ink);
+    border:none; font-size:17px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+    line-height:1;
+  }
+  .add-btn:active{ transform: scale(0.9); }
+  .qty-control{
+    display:flex; align-items:center; gap:8px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-soft);
+    border-radius:9px; padding:3px 6px;
+  }
+  .qty-control button{
+    width:22px; height:22px; border:none; border-radius:6px;
+    background: var(--bg-raise-2); color: var(--text);
+    font-size:15px; font-weight:700;
+  }
+  .qty-control span{ font-size:13px; font-weight:700; min-width:14px; text-align:center; font-variant-numeric: tabular-nums; }
+
+  /* ---------- Token list ---------- */
+  .token-list{ display:flex; flex-direction:column; gap:8px; }
+  .token-row{
+    background: var(--bg-raise);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 13px;
+    display:flex; align-items:center; gap:12px;
+  }
+  .token-icon{
+    width:42px; height:42px; border-radius:11px;
+    background: var(--bg-raise-2);
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; flex:0 0 auto;
+  }
+  .token-info{ flex:1; min-width:0; }
+  .token-name{ font-size:13.5px; font-weight:700; }
+  .token-meta{ font-size:11px; color: var(--text-faint); margin-top:2px; }
+  .token-right{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; }
+
+  /* ---------- Bottom nav ---------- */
+  .bottomnav{
+    position:fixed; left:0; right:0; bottom:0; z-index:30;
+    background: rgba(10,10,11,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top:1px solid var(--border-soft);
+    display:flex; justify-content:space-around;
+    padding: 9px 4px calc(9px + env(safe-area-inset-bottom));
+  }
+  .nav-item{
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+    color: var(--text-faint); font-size:10px; font-weight:700;
+    position:relative; padding:2px 12px;
+    background:none; border:none;
+  }
+  .nav-item.active{ color: var(--accent); }
+  .nav-item svg{ width:21px; height:21px; }
+  .nav-cart-badge{
+    position:absolute; top:-3px; right:4px;
+    background: var(--danger); color:#fff;
+    font-size:9px; font-weight:800;
+    border-radius:8px; min-width:15px; height:15px;
+    display:flex; align-items:center; justify-content:center;
+    padding:0 3px;
+  }
+
+  /* ---------- Pages ---------- */
+  .page{ position:relative; z-index:1; }
+  .page.hidden{ display:none; }
+
+  .page-header{ padding: 18px 18px 6px; position:relative; z-index:1; }
+  .page-header h1{ font-size:22px; font-weight:900; letter-spacing:-0.01em; }
+  .page-header p{ font-size:12.5px; color: var(--text-faint); margin-top:4px; }
+
+  /* ---------- Orders page ---------- */
+  .sub-card{
+    background: var(--bg-raise);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .sub-card-top{ display:flex; align-items:center; gap:11px; }
+  .sub-card-icon{
+    width:40px; height:40px; border-radius:11px;
+    background: var(--bg-raise-2);
+    display:flex; align-items:center; justify-content:center; font-size:18px; flex:0 0 auto;
+  }
+  .sub-card-info{ flex:1; min-width:0; }
+  .sub-card-name{ font-size:13.5px; font-weight:700; }
+  .sub-card-exp{ font-size:11px; color: var(--text-faint); margin-top:2px; }
+  .chip{
+    font-size:10px; font-weight:800; padding:4px 9px; border-radius:7px;
+    text-transform:uppercase; letter-spacing:0.02em; white-space:nowrap;
+  }
+  .chip.active{ background: var(--success-dim); color: var(--success); }
+  .chip.expiring{ background: var(--warn-dim); color: var(--warn); }
+  .chip.expired{ background: rgba(255,255,255,0.07); color: var(--text-faint); }
+  .chip.done{ background: var(--accent-dim); color: var(--accent); }
+  .progress-track{
+    height:5px; border-radius:4px; background: var(--bg-input); overflow:hidden;
+  }
+  .progress-fill{ height:100%; background: var(--accent); border-radius:4px; }
+
+  .order-list{ display:flex; flex-direction:column; gap:8px; }
+  .order-row{
+    background: var(--bg-raise);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 12px 13px;
+    display:flex; align-items:center; gap:11px;
+  }
+  .order-icon{
+    width:36px; height:36px; border-radius:10px;
+    background: var(--bg-raise-2);
+    display:flex; align-items:center; justify-content:center; font-size:16px; flex:0 0 auto;
+  }
+  .order-info{ flex:1; min-width:0; }
+  .order-name{ font-size:13px; font-weight:700; }
+  .order-meta{ font-size:10.5px; color: var(--text-faint); margin-top:2px; font-variant-numeric: tabular-nums; }
+  .order-right{ display:flex; flex-direction:column; align-items:flex-end; gap:5px; }
+  .order-price{ font-size:12.5px; font-weight:700; font-variant-numeric: tabular-nums; }
+
+  .empty-block{
+    text-align:center; padding: 34px 20px; color: var(--text-faint);
+    background: var(--bg-raise); border:1px solid var(--border-soft); border-radius: var(--radius-md);
+  }
+  .empty-block .emoji{ font-size:30px; margin-bottom:8px; }
+
+  /* ---------- Profile page ---------- */
+  .profile-head{
+    display:flex; align-items:center; gap:13px;
+    padding: 8px 18px 4px;
+  }
+  .avatar{
+    width:56px; height:56px; border-radius:16px;
+    background: linear-gradient(135deg, var(--accent), #9fe000);
+    color: var(--accent-ink);
+    display:flex; align-items:center; justify-content:center;
+    font-family: var(--font-display); font-weight:900; font-size:20px;
+    flex:0 0 auto;
+  }
+  .profile-name{ font-size:16.5px; font-weight:800; }
+  .profile-username{ font-size:12px; color: var(--text-faint); margin-top:2px; }
+
+  .balance-card{
+    margin: 16px 18px 0;
+    background: linear-gradient(135deg, #17190e, var(--bg-raise));
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .balance-card-label{ font-size:11px; color: var(--text-faint); font-weight:700; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
+  .balance-card-value{ font-family: var(--font-display); font-size:26px; font-weight:900; font-variant-numeric: tabular-nums; }
+  .balance-card-value .star{ color: var(--accent); }
+  .topup-btn{
+    background: var(--accent); color: var(--accent-ink);
+    border:none; border-radius: var(--radius-sm);
+    padding: 11px 16px; font-size:12.5px; font-weight:800;
+    white-space:nowrap;
+  }
+
+  .stat-row{ display:grid; grid-template-columns: repeat(3,1fr); gap:8px; margin: 12px 18px 0; }
+  .stat-tile{
+    background: var(--bg-raise); border:1px solid var(--border-soft); border-radius: var(--radius-md);
+    padding: 12px 10px; text-align:center;
+  }
+  .stat-value{ font-family: var(--font-display); font-size:17px; font-weight:900; font-variant-numeric: tabular-nums; }
+  .stat-label{ font-size:9.5px; color: var(--text-faint); margin-top:3px; font-weight:600; text-transform:uppercase; letter-spacing:0.03em; }
+
+  .menu-list{ display:flex; flex-direction:column; margin: 18px 18px 0; border-radius: var(--radius-md); overflow:hidden; border:1px solid var(--border-soft); }
+  .menu-row{
+    display:flex; align-items:center; gap:12px;
+    padding: 14px 15px;
+    background: var(--bg-raise);
+    border-bottom: 1px solid var(--border-soft);
+    font-size:13.5px; font-weight:600;
+  }
+  .menu-row:last-child{ border-bottom:none; }
+  .menu-row .m-icon{
+    width:32px; height:32px; border-radius:9px; background: var(--bg-raise-2);
+    display:flex; align-items:center; justify-content:center; font-size:15px; flex:0 0 auto;
+  }
+  .menu-row .m-label{ flex:1; }
+  .menu-row .m-right{ font-size:12px; color: var(--text-faint); font-weight:600; }
+  .menu-row .m-arrow{ color: var(--text-faint); font-size:15px; }
+
+  .profile-footer{ text-align:center; padding: 22px 18px 6px; font-size:10.5px; color: var(--text-faint); }
+
+  /* ---------- Sheet ---------- */
+  .sheet-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.6);
+    z-index:40; opacity:0; pointer-events:none; transition: opacity .2s ease;
+  }
+  .sheet-overlay.open{ opacity:1; pointer-events:auto; }
+  .sheet{
+    position:fixed; left:0; right:0; bottom:0; z-index:41;
+    background: var(--bg-raise);
+    border: 1px solid var(--border);
+    border-bottom:none;
+    border-radius: 20px 20px 0 0;
+    max-height: 82vh;
+    display:flex; flex-direction:column;
+    transform: translateY(100%);
+    transition: transform .25s cubic-bezier(.32,.72,0,1);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .sheet.open{ transform: translateY(0); }
+  .sheet-handle{ width:36px; height:4px; background: var(--border); border-radius:3px; margin:10px auto; }
+  .sheet-header{ padding: 2px 18px 12px; display:flex; align-items:center; justify-content:space-between; }
+  .sheet-title{ font-family: var(--font-display); font-size:17px; font-weight:800; }
+  .sheet-close{ font-size:13px; color: var(--text-faint); font-weight:600; }
+  .sheet-body{ overflow-y:auto; padding: 0 18px; flex:1; }
+  .cart-item{
+    display:flex; align-items:center; gap:11px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .cart-item-icon{
+    width:40px; height:40px; border-radius:10px;
+    background: var(--bg-raise-2);
+    display:flex; align-items:center; justify-content:center; font-size:17px;
+    flex:0 0 auto;
+  }
+  .cart-item-info{ flex:1; min-width:0; }
+  .cart-item-name{ font-size:13px; font-weight:700; }
+  .cart-item-price{ font-size:11.5px; color: var(--text-faint); margin-top:2px; font-variant-numeric: tabular-nums; }
+  .cart-empty{ text-align:center; padding: 40px 20px; color: var(--text-faint); }
+  .cart-empty .emoji{ font-size:36px; margin-bottom:10px; }
+
+  .sheet-footer{ padding: 13px 18px; border-top: 1px solid var(--border-soft); }
+  .total-row{ display:flex; justify-content:space-between; font-size:13px; margin-bottom:5px; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+  .total-row.main{ font-size:16px; font-weight:800; color: var(--text); margin-top:5px; margin-bottom:13px; font-variant-numeric: tabular-nums; }
+  .checkout-btn{
+    width:100%; padding:14px; border:none; border-radius: var(--radius-sm);
+    background: var(--accent); color: var(--accent-ink);
+    font-size:14.5px; font-weight:800;
+  }
+  .checkout-btn:disabled{ opacity:.5; }
+
+  /* ---------- Product detail sheet ---------- */
+  .detail-body{ padding: 4px 18px 20px; }
+  .detail-icon{
+    width:60px; height:60px; border-radius:16px;
+    background: var(--bg-raise-2);
+    display:flex; align-items:center; justify-content:center;
+    font-size:27px; margin-bottom:13px;
+  }
+  .detail-name{ font-family: var(--font-display); font-size:19px; font-weight:800; margin-bottom:5px; }
+  .detail-price{ font-size:13.5px; font-weight:700; color: var(--accent); margin-bottom:13px; }
+  .detail-desc{ font-size:13px; color: var(--text-dim); line-height:1.55; margin-bottom:15px; }
+  .feature-list{ display:flex; flex-direction:column; gap:9px; margin-bottom:17px; }
+  .feature-item{ display:flex; align-items:center; gap:9px; font-size:12.5px; color: var(--text); }
+  .feature-item .check{ color: var(--accent); font-weight:800; }
+  .plan-options{ display:flex; gap:8px; margin-bottom:17px; }
+  .plan-opt{
+    flex:1; text-align:center; padding:11px 6px; border-radius: var(--radius-sm);
+    border:1.5px solid var(--border);
+    font-size:11.5px; cursor:pointer; background: var(--bg-input);
+  }
+  .plan-opt .p-len{ font-weight:700; font-size:12.5px; margin-bottom:2px; color: var(--text); }
+  .plan-opt .p-price{ color: var(--text-faint); font-size:11px; font-variant-numeric: tabular-nums; }
+  .plan-opt.selected{ border-color: var(--accent); background: var(--accent-dim); }
+  .plan-opt.selected .p-len{ color: var(--accent); }
+
+  /* toast */
+  .toast{
+    position:fixed; left:50%; bottom:104px; transform: translateX(-50%) translateY(10px);
+    background: var(--bg-raise-2); color: var(--text); font-size:12.5px; font-weight:700;
+    border: 1px solid var(--border);
+    padding:11px 17px; border-radius:24px; z-index:60;
+    opacity:0; pointer-events:none; transition: all .25s ease;
+    white-space:nowrap;
+  }
+  .toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
+
+  .hidden{ display:none !important; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="announce" id="announceBar">
+    🔥 <span>Скидка 10% при первом заказе</span> <span class="dim">· промокод AISTART</span>
+    <span class="announce-close" id="announceClose">✕</span>
+  </div>
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="logo">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" fill="currentColor"/></svg>
+      </div>
+      <div>
+        <div class="brand-title">AI SHOP</div>
+        <div class="brand-sub">Подписки и токены для нейросетей</div>
+      </div>
+    </div>
+    <div class="balance-pill"><span class="star">₽</span> <span id="starBalance">1 250</span></div>
+  </div>
+
+  <!-- ===================== SHOP PAGE ===================== -->
+  <div class="page" id="page-shop">
+    <div class="searchbar">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input id="searchInput" type="text" placeholder="Поиск подписок, токенов, инструментов…" autocomplete="off">
+      <span class="search-clear hidden" id="searchClear">✕</span>
+    </div>
+
+    <div class="tabs" id="tabs">
+      <div class="tab active" data-tab="all">Всё</div>
+      <div class="tab" data-tab="subs">Подписки</div>
+      <div class="tab" data-tab="tokens">Токены</div>
+      <div class="tab" data-tab="images">Изображения</div>
+      <div class="tab" data-tab="tools">Инструменты</div>
+    </div>
+
+    <div class="promo">
+      <div class="promo-eyebrow">Предложение недели</div>
+      <div class="promo-title">−20% на первую подписку</div>
+      <div class="promo-sub">Промокод AISTART при оформлении заказа</div>
+    </div>
+
+    <div class="section" data-section="subs">
+      <div class="section-head">
+        <div class="section-title">Подписки</div>
+        <div class="section-link">Все →</div>
+      </div>
+      <div class="grid" id="subsGrid"></div>
+    </div>
+
+    <div class="section" data-section="tokens">
+      <div class="section-head">
+        <div class="section-title">Пакеты токенов</div>
+        <div class="section-link">Все →</div>
+      </div>
+      <div class="token-list" id="tokensList"></div>
+    </div>
+
+    <div class="section" data-section="images">
+      <div class="section-head">
+        <div class="section-title">Генерация изображений</div>
+      </div>
+      <div class="grid" id="imagesGrid"></div>
+    </div>
+
+    <div class="search-empty hidden" id="searchEmpty">Ничего не найдено. Попробуйте другой запрос.</div>
+  </div>
+
+  <!-- ===================== ORDERS PAGE ===================== -->
+  <div class="page hidden" id="page-orders">
+    <div class="page-header">
+      <h1>Заказы</h1>
+      <p>Активные подписки и история покупок</p>
+    </div>
+
+    <div class="section" style="padding-top:6px">
+      <div class="section-head"><div class="section-title">Активные подписки</div></div>
+      <div id="activeSubsList" style="display:flex;flex-direction:column;gap:10px;"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><div class="section-title">История заказов</div></div>
+      <div class="order-list" id="orderHistoryList"></div>
+    </div>
+  </div>
+
+  <!-- ===================== PROFILE PAGE ===================== -->
+  <div class="page hidden" id="page-profile">
+    <div class="profile-head">
+      <div class="avatar" id="profileAvatar">?</div>
+      <div>
+        <div class="profile-name" id="profileName">Гость</div>
+        <div class="profile-username" id="profileUsername">@guest</div>
+      </div>
+    </div>
+
+    <div class="balance-card">
+      <div>
+        <div class="balance-card-label">Баланс</div>
+        <div class="balance-card-value"><span class="star">₽</span> <span id="profileBalance">1 250</span></div>
+      </div>
+      <button class="topup-btn" id="topupBtn">Пополнить</button>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-tile"><div class="stat-value">2</div><div class="stat-label">Активно</div></div>
+      <div class="stat-tile"><div class="stat-value">7</div><div class="stat-label">Заказов</div></div>
+      <div class="stat-tile"><div class="stat-value">12 340</div><div class="stat-label">Потрачено ₽</div></div>
+    </div>
+
+    <div class="menu-list">
+      <div class="menu-row" data-action="orders"><div class="m-icon">🧾</div><div class="m-label">История заказов</div><div class="m-arrow">›</div></div>
+      <div class="menu-row" data-action="promo"><div class="m-icon">🏷️</div><div class="m-label">Промокоды</div><div class="m-arrow">›</div></div>
+      <div class="menu-row" data-action="invite"><div class="m-icon">🎁</div><div class="m-label">Пригласить друга</div><div class="m-right">+500 ₽</div></div>
+      <div class="menu-row" data-action="support"><div class="m-icon">💬</div><div class="m-label">Поддержка</div><div class="m-arrow">›</div></div>
+      <div class="menu-row" data-action="about"><div class="m-icon">ℹ️</div><div class="m-label">О магазине</div><div class="m-arrow">›</div></div>
+    </div>
+
+    <div class="profile-footer">AI Shop · demo build 1.0</div>
+  </div>
+
+</div>
+
+<div class="bottomnav">
+  <div class="nav-item active" data-nav="home">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+    Магазин
+  </div>
+  <div class="nav-item" data-nav="orders">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z"/><path d="M9 8h6M9 12h6"/></svg>
+    Заказы
+  </div>
+  <div class="nav-item" data-nav="cart">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h2l1.6 9.6a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.6L21 8H7"/><circle cx="10" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/></svg>
+    Корзина
+    <div class="nav-cart-badge hidden" id="cartBadge">0</div>
+  </div>
+  <div class="nav-item" data-nav="profile">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.6-3.8 5-5.5 7.5-5.5s5.9 1.7 7.5 5.5"/></svg>
+    Профиль
+  </div>
+</div>
+
+<!-- Cart sheet -->
+<div class="sheet-overlay" id="cartOverlay"></div>
+<div class="sheet" id="cartSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">Корзина</div>
+    <div class="sheet-close" id="cartClose">Закрыть</div>
+  </div>
+  <div class="sheet-body" id="cartBody"></div>
+  <div class="sheet-footer" id="cartFooter"></div>
+</div>
+
+<!-- Product detail sheet -->
+<div class="sheet-overlay" id="detailOverlay"></div>
+<div class="sheet" id="detailSheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-title">&nbsp;</div>
+    <div class="sheet-close" id="detailClose">Закрыть</div>
+  </div>
+  <div class="sheet-body">
+    <div class="detail-body" id="detailBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+  if (tg) {
+    try { tg.ready(); tg.expand(); } catch(e){}
+    try { tg.setHeaderColor && tg.setHeaderColor('#0a0a0b'); } catch(e){}
+    try { tg.setBackgroundColor && tg.setBackgroundColor('#0a0a0b'); } catch(e){}
+  }
+
+  // Пользователь, чью личность подтвердил сервер (проверил подпись initData
+  // токеном бота). Пока сервера рядом нет — остаётся null, и профиль
+  // работает в демо-режиме на непроверенных данных из tg.initDataUnsafe.
+  let verifiedUser = null;
+
+  async function authWithServer(){
+    if (!tg || !tg.initData) return;
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: tg.initData }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.ok && data.user) {
+        verifiedUser = data.user;
+        if (currentPage === 'profile') renderProfile();
+        if (typeof data.user.balance === 'number') {
+          document.getElementById('starBalance').textContent = fmt(data.user.balance);
+          document.getElementById('profileBalance').textContent = fmt(data.user.balance);
+        }
+      }
+    } catch (e) {
+      // бэкенд недоступен (например, статичный демо-хостинг без сервера рядом) — остаёмся в демо-режиме
+    }
+  }
+
+  // ---------------- DATA ----------------
+  const PRODUCTS = [
+    { id:'sub-gpt', cat:'subs', icon:'✨', name:'ChatGPT Plus', desc:'GPT-5, безлимит сообщений, приоритет', price:990, oldPrice:1290, unit:'/мес', badge:'-23%',
+      features:['Модель GPT-5 без ограничений','Генерация изображений','Приоритетный доступ в часы пик','Голосовой режим'],
+      plans:[{len:'1 месяц',price:990},{len:'3 месяца',price:2690},{len:'12 месяцев',price:9990}] },
+    { id:'sub-claude', cat:'subs', icon:'🎭', name:'Claude Pro', desc:'Claude Opus/Sonnet, большой контекст', price:1090, unit:'/мес',
+      features:['Модели Opus и Sonnet','Контекст до 200k токенов','Claude Code включён','Проекты и артефакты'],
+      plans:[{len:'1 месяц',price:1090},{len:'3 месяца',price:2990},{len:'12 месяцев',price:10900}] },
+    { id:'sub-mj', cat:'images', icon:'🎨', name:'Midjourney Standard', desc:'Безлимит изображений в расслабленном режиме', price:1450, unit:'/мес',
+      features:['Безлимит генераций (relax)','15 часов fast-режима','Коммерческое использование','Доступ к галерее'],
+      plans:[{len:'1 месяц',price:1450},{len:'12 месяцев',price:13900}] },
+    { id:'sub-suno', cat:'subs', icon:'🎵', name:'Suno Pro', desc:'Генерация музыки, 500 треков/мес', price:790, unit:'/мес',
+      features:['500 генераций в месяц','Коммерческая лицензия','Без водяных знаков','Приоритетная очередь'],
+      plans:[{len:'1 месяц',price:790},{len:'12 месяцев',price:7900}] },
+    { id:'img-dalle', cat:'images', icon:'🖼️', name:'DALL·E пакет', desc:'300 генераций изображений', price:650, unit:'',
+      features:['300 изображений HD','Любые пропорции','Коммерческое использование'],
+      plans:[{len:'300 шт.',price:650},{len:'1000 шт.',price:1890}] },
+    { id:'tool-cursor', cat:'tools', icon:'⌨️', name:'Cursor Pro', desc:'AI-редактор кода, безлимит автокомплита', price:1590, unit:'/мес',
+      features:['Безлимитный автокомплит','500 быстрых запросов GPT-5/Claude','Работа с большими репозиториями'],
+      plans:[{len:'1 месяц',price:1590},{len:'12 месяцев',price:15900}] },
+    { id:'tool-elevenlabs', cat:'tools', icon:'🔊', name:'ElevenLabs Creator', desc:'Озвучка текста, клонирование голоса', price:990, unit:'/мес',
+      features:['100 000 символов/мес','Клонирование голоса','30 языков'],
+      plans:[{len:'1 месяц',price:990},{len:'12 месяцев',price:9900}] },
+  ];
+
+  const TOKENS = [
+    { id:'tok-gpt-100', cat:'tokens', icon:'🟢', name:'OpenAI API — 100k токенов', meta:'GPT-5 / GPT-5-mini · не сгорают', price:390 },
+    { id:'tok-gpt-500', cat:'tokens', icon:'🟢', name:'OpenAI API — 500k токенов', meta:'GPT-5 / GPT-5-mini · не сгорают', price:1690 },
+    { id:'tok-claude-100', cat:'tokens', icon:'🟠', name:'Anthropic API — 100k токенов', meta:'Claude Opus/Sonnet · не сгорают', price:450 },
+    { id:'tok-claude-500', cat:'tokens', icon:'🟠', name:'Anthropic API — 500k токенов', meta:'Claude Opus/Sonnet · не сгорают', price:1990 },
+    { id:'tok-mj-fast', cat:'tokens', icon:'🟣', name:'Midjourney Fast-часы ×10', meta:'Разовая покупка, не требует подписки', price:890 },
+  ];
+
+  const ALL_ITEMS = [...PRODUCTS, ...TOKENS];
+
+  const ACTIVE_SUBS = [
+    { id:'sub-gpt', started:'28 авг', daysLeft:25, totalDays:30 },
+    { id:'tool-cursor', started:'15 авг', daysLeft:8, totalDays:30 },
+  ];
+
+  const ORDER_HISTORY = [
+    { id:'tok-gpt-100', date:'20 авг 2026', price:390, status:'done' },
+    { id:'sub-mj', date:'3 июл 2026', price:1450, status:'expired' },
+    { id:'tok-claude-500', date:'28 июн 2026', price:1990, status:'done' },
+    { id:'sub-suno', date:'12 май 2026', price:790, status:'expired' },
+  ];
+
+  // ---------------- STATE ----------------
+  let cart = {};
+  let currentTab = 'all';
+  let currentPage = 'shop';
+  let selectedPlanIdx = 0;
+  let searchQuery = '';
+
+  const fmt = n => n.toLocaleString('ru-RU');
+
+  // ---------------- RENDER: SHOP ----------------
+  const subsGrid = document.getElementById('subsGrid');
+  const tokensList = document.getElementById('tokensList');
+  const imagesGrid = document.getElementById('imagesGrid');
+
+  function renderCard(p){
+    const qty = cart[p.id] || 0;
+    return `
+    <div class="card" data-id="${p.id}">
+      ${p.badge ? `<div class="card-badge">${p.badge}</div>` : ''}
+      <div class="card-icon">${p.icon}</div>
+      <div class="card-name">${p.name}</div>
+      <div class="card-desc">${p.desc}</div>
+      <div class="card-bottom">
+        <div class="price-block">
+          ${p.oldPrice ? `<div class="price-old">${fmt(p.oldPrice)} ₽</div>` : ''}
+          <div class="price">${fmt(p.price)} ₽<span class="unit">${p.unit||''}</span></div>
+        </div>
+        ${qty > 0
+          ? `<div class="qty-control" data-id="${p.id}"><button data-act="dec">−</button><span>${qty}</span><button data-act="inc">+</button></div>`
+          : `<button class="add-btn" data-add="${p.id}">+</button>`}
+      </div>
+    </div>`;
+  }
+
+  function renderTokenRow(t){
+    const qty = cart[t.id] || 0;
+    return `
+    <div class="token-row" data-id="${t.id}">
+      <div class="token-icon">${t.icon}</div>
+      <div class="token-info">
+        <div class="token-name">${t.name}</div>
+        <div class="token-meta">${t.meta}</div>
+      </div>
+      <div class="token-right">
+        <div class="price">${fmt(t.price)} ₽</div>
+        ${qty > 0
+          ? `<div class="qty-control" data-id="${t.id}"><button data-act="dec">−</button><span>${qty}</span><button data-act="inc">+</button></div>`
+          : `<button class="add-btn" data-add="${t.id}">+</button>`}
+      </div>
+    </div>`;
+  }
+
+  function matchesQuery(item, q){
+    if (!q) return true;
+    const hay = (item.name + ' ' + (item.desc || item.meta || '')).toLowerCase();
+    return hay.includes(q);
+  }
+
+  function renderShop(){
+    const q = searchQuery.trim().toLowerCase();
+    const subs = PRODUCTS.filter(p => (p.cat === 'subs' || p.cat === 'tools') && matchesQuery(p, q));
+    const imgs = PRODUCTS.filter(p => p.cat === 'images' && matchesQuery(p, q));
+    const tokens = TOKENS.filter(t => matchesQuery(t, q));
+
+    subsGrid.innerHTML = subs.map(renderCard).join('');
+    tokensList.innerHTML = tokens.map(renderTokenRow).join('');
+    imagesGrid.innerHTML = imgs.map(renderCard).join('');
+
+    const sectionHasResults = { subs: subs.length > 0, tokens: tokens.length > 0, images: imgs.length > 0 };
+    let anyVisible = false;
+
+    document.querySelectorAll('[data-section]').forEach(sec => {
+      const key = sec.dataset.section;
+      let show = true;
+      if (currentTab !== 'all') {
+        show = key === currentTab;
+        if (currentTab === 'tools') show = key === 'subs';
+      }
+      if (show && q && !sectionHasResults[key]) show = false;
+      if (show) anyVisible = true;
+      sec.classList.toggle('hidden', !show);
+    });
+
+    document.getElementById('searchEmpty').classList.toggle('hidden', anyVisible);
+    document.querySelector('.promo').classList.toggle('hidden', !!q);
+  }
+
+  // ---------------- RENDER: ORDERS ----------------
+  const statusMeta = {
+    active: {label:'Активна', cls:'active'},
+    expiring: {label:'Истекает', cls:'expiring'},
+    expired: {label:'Истёк', cls:'expired'},
+    done: {label:'Выполнен', cls:'done'},
+  };
+
+  function renderActiveSubs(){
+    const wrap = document.getElementById('activeSubsList');
+    if (ACTIVE_SUBS.length === 0) {
+      wrap.innerHTML = `<div class="empty-block"><div class="emoji">📦</div>Нет активных подписок</div>`;
+      return;
+    }
+    wrap.innerHTML = ACTIVE_SUBS.map(s => {
+      const item = ALL_ITEMS.find(i => i.id === s.id);
+      const pct = Math.round((s.daysLeft / s.totalDays) * 100);
+      const st = s.daysLeft <= 10 ? statusMeta.expiring : statusMeta.active;
+      return `
+      <div class="sub-card">
+        <div class="sub-card-top">
+          <div class="sub-card-icon">${item.icon}</div>
+          <div class="sub-card-info">
+            <div class="sub-card-name">${item.name}</div>
+            <div class="sub-card-exp">с ${s.started} · осталось ${s.daysLeft} дн.</div>
+          </div>
+          <div class="chip ${st.cls}">${st.label}</div>
+        </div>
+        <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderOrderHistory(){
+    const wrap = document.getElementById('orderHistoryList');
+    if (ORDER_HISTORY.length === 0) {
+      wrap.innerHTML = `<div class="empty-block"><div class="emoji">🧾</div>Заказов пока нет</div>`;
+      return;
+    }
+    wrap.innerHTML = ORDER_HISTORY.map(o => {
+      const item = ALL_ITEMS.find(i => i.id === o.id);
+      const st = statusMeta[o.status];
+      return `
+      <div class="order-row">
+        <div class="order-icon">${item.icon}</div>
+        <div class="order-info">
+          <div class="order-name">${item.name}</div>
+          <div class="order-meta">${o.date}</div>
+        </div>
+        <div class="order-right">
+          <div class="order-price">${fmt(o.price)} ₽</div>
+          <div class="chip ${st.cls}">${st.label}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ---------------- RENDER: PROFILE ----------------
+  function renderProfile(){
+    let name = 'Гость', username = '@guest', initials = 'ГС';
+    try {
+      // Приоритет: подтверждённые сервером данные, иначе — непроверенные
+      // данные из tg.initDataUnsafe (годятся только для отображения в демо).
+      const u = verifiedUser || (tg && tg.initDataUnsafe && tg.initDataUnsafe.user);
+      if (u) {
+        const firstName = u.firstName || u.first_name || '';
+        const lastName = u.lastName || u.last_name || '';
+        name = [firstName, lastName].filter(Boolean).join(' ') || 'Пользователь';
+        username = u.username ? '@' + u.username : '·';
+        initials = (firstName || '?').slice(0,1).toUpperCase() + (lastName ? lastName.slice(0,1).toUpperCase() : '');
+      }
+    } catch(e){}
+    document.getElementById('profileName').textContent = name;
+    document.getElementById('profileUsername').textContent = username;
+    document.getElementById('profileAvatar').textContent = initials;
+  }
+
+  // ---------------- PAGE SWITCH ----------------
+  function showPage(page){
+    currentPage = page;
+    ['shop','orders','profile'].forEach(p => {
+      document.getElementById('page-' + p).classList.toggle('hidden', p !== page);
+    });
+    document.querySelectorAll('.nav-item').forEach(n => {
+      n.classList.toggle('active', n.dataset.nav === (page === 'shop' ? 'home' : page));
+    });
+    if (page === 'orders') { renderActiveSubs(); renderOrderHistory(); }
+    if (page === 'profile') { renderProfile(); }
+    window.scrollTo({top:0});
+  }
+
+  // ---------------- CART LOGIC ----------------
+  function addToCart(id){
+    cart[id] = (cart[id] || 0) + 1;
+    onCartChange();
+    showToast('Добавлено в корзину');
+    try { if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light'); } catch(e){}
+  }
+  function decFromCart(id){
+    if (!cart[id]) return;
+    cart[id] -= 1;
+    if (cart[id] <= 0) delete cart[id];
+    onCartChange();
+  }
+  function incInCart(id){
+    cart[id] = (cart[id] || 0) + 1;
+    onCartChange();
+  }
+  function cartCount(){
+    return Object.values(cart).reduce((a,b)=>a+b,0);
+  }
+  function cartTotal(){
+    return Object.entries(cart).reduce((sum,[id,qty]) => {
+      const item = ALL_ITEMS.find(i => i.id === id);
+      return sum + (item ? item.price*qty : 0);
+    }, 0);
+  }
+
+  function onCartChange(){
+    renderShop();
+    updateCartBadge();
+    renderCartSheet();
+    updateMainButton();
+  }
+
+  function updateCartBadge(){
+    const badge = document.getElementById('cartBadge');
+    const count = cartCount();
+    badge.textContent = count;
+    badge.classList.toggle('hidden', count === 0);
+  }
+
+  // ---------------- CART SHEET ----------------
+  const cartOverlay = document.getElementById('cartOverlay');
+  const cartSheet = document.getElementById('cartSheet');
+  const cartBody = document.getElementById('cartBody');
+  const cartFooter = document.getElementById('cartFooter');
+
+  function openCart(){
+    cartOverlay.classList.add('open');
+    cartSheet.classList.add('open');
+    renderCartSheet();
+  }
+  function closeCart(){
+    cartOverlay.classList.remove('open');
+    cartSheet.classList.remove('open');
+  }
+
+  function renderCartSheet(){
+    const entries = Object.entries(cart);
+    if (entries.length === 0) {
+      cartBody.innerHTML = `<div class="cart-empty"><div class="emoji">🛒</div>Корзина пуста<br>Добавьте подписку или пакет токенов</div>`;
+      cartFooter.innerHTML = '';
+      return;
+    }
+    cartBody.innerHTML = entries.map(([id,qty]) => {
+      const item = ALL_ITEMS.find(i => i.id === id);
+      return `
+      <div class="cart-item">
+        <div class="cart-item-icon">${item.icon}</div>
+        <div class="cart-item-info">
+          <div class="cart-item-name">${item.name}</div>
+          <div class="cart-item-price">${fmt(item.price)} ₽ ${item.unit||''} × ${qty}</div>
+        </div>
+        <div class="qty-control" data-id="${id}">
+          <button data-act="dec">−</button><span>${qty}</span><button data-act="inc">+</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    const total = cartTotal();
+    const discount = total >= 3000 ? Math.round(total*0.05) : 0;
+    const finalTotal = total - discount;
+    cartFooter.innerHTML = `
+      <div class="total-row"><span>Сумма</span><span>${fmt(total)} ₽</span></div>
+      ${discount ? `<div class="total-row"><span>Скидка</span><span>−${fmt(discount)} ₽</span></div>` : ''}
+      <div class="total-row main"><span>Итого</span><span>${fmt(finalTotal)} ₽</span></div>
+      <button class="checkout-btn" id="checkoutBtn">Оформить заказ · ${fmt(finalTotal)} ₽</button>
+    `;
+    document.getElementById('checkoutBtn').addEventListener('click', checkout);
+  }
+
+  function checkout(){
+    if (cartCount() === 0) return;
+    const total = cartTotal();
+    let asked = false;
+    try {
+      if (tg && tg.showConfirm) {
+        tg.showConfirm(`Оплатить ${fmt(total)} ₽ и получить доступ?`, (ok) => {
+          if (ok) completeOrder();
+        });
+        asked = true;
+      }
+    } catch (e) { asked = false; }
+    if (!asked) {
+      if (window.confirm(`Оплатить ${fmt(total)} ₽ и получить доступ?`)) completeOrder();
+    }
+  }
+
+  function completeOrder(){
+    try { if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success'); } catch(e){}
+    showToast('✅ Заказ оформлен! Доступ придёт в чат с ботом');
+    cart = {};
+    onCartChange();
+    closeCart();
+  }
+
+  // ---------------- DETAIL SHEET ----------------
+  const detailOverlay = document.getElementById('detailOverlay');
+  const detailSheet = document.getElementById('detailSheet');
+  const detailBody = document.getElementById('detailBody');
+
+  function openDetail(id){
+    const item = PRODUCTS.find(p => p.id === id);
+    if (!item) return;
+    selectedPlanIdx = 0;
+    renderDetail(item);
+    detailOverlay.classList.add('open');
+    detailSheet.classList.add('open');
+  }
+  function closeDetail(){
+    detailOverlay.classList.remove('open');
+    detailSheet.classList.remove('open');
+  }
+
+  function renderDetail(item){
+    const plans = item.plans || [{len:'Покупка',price:item.price}];
+    detailBody.innerHTML = `
+      <div class="detail-icon">${item.icon}</div>
+      <div class="detail-name">${item.name}</div>
+      <div class="detail-price">от ${fmt(Math.min(...plans.map(p=>p.price)))} ₽</div>
+      <div class="detail-desc">${item.desc}</div>
+      <div class="feature-list">
+        ${(item.features||[]).map(f => `<div class="feature-item"><span class="check">✓</span>${f}</div>`).join('')}
+      </div>
+      <div class="plan-options" id="planOptions">
+        ${plans.map((pl,i) => `
+          <div class="plan-opt ${i===0?'selected':''}" data-idx="${i}">
+            <div class="p-len">${pl.len}</div>
+            <div class="p-price">${fmt(pl.price)} ₽</div>
+          </div>`).join('')}
+      </div>
+      <button class="checkout-btn" id="detailAddBtn">Добавить в корзину</button>
+    `;
+    document.querySelectorAll('#planOptions .plan-opt').forEach(el => {
+      el.addEventListener('click', () => {
+        document.querySelectorAll('#planOptions .plan-opt').forEach(o=>o.classList.remove('selected'));
+        el.classList.add('selected');
+        selectedPlanIdx = Number(el.dataset.idx);
+      });
+    });
+    document.getElementById('detailAddBtn').addEventListener('click', () => {
+      addToCart(item.id);
+      closeDetail();
+    });
+  }
+
+  // ---------------- TOAST ----------------
+  let toastTimer = null;
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=> t.classList.remove('show'), 2200);
+  }
+
+  // ---------------- MAIN BUTTON ----------------
+  function updateMainButton(){
+    if (!tg || !tg.MainButton) return;
+    try {
+      const count = cartCount();
+      if (count > 0) {
+        tg.MainButton.setText(`Корзина · ${fmt(cartTotal())} ₽`);
+        tg.MainButton.show();
+      } else {
+        tg.MainButton.hide();
+      }
+    } catch(e){}
+  }
+  if (tg && tg.MainButton) {
+    try { tg.MainButton.onClick(openCart); } catch(e){}
+    try {
+      tg.BackButton && tg.BackButton.onClick(() => {
+        if (detailSheet.classList.contains('open')) closeDetail();
+        else if (cartSheet.classList.contains('open')) closeCart();
+      });
+    } catch (e) {}
+  }
+
+  // ---------------- EVENTS ----------------
+  document.getElementById('announceClose').addEventListener('click', () => {
+    document.getElementById('announceBar').classList.add('hidden');
+  });
+
+  document.getElementById('tabs').addEventListener('click', (e) => {
+    const tab = e.target.closest('.tab');
+    if (!tab) return;
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    currentTab = tab.dataset.tab;
+    renderShop();
+  });
+
+  const searchInput = document.getElementById('searchInput');
+  const searchClear = document.getElementById('searchClear');
+  searchInput.addEventListener('input', () => {
+    searchQuery = searchInput.value;
+    searchClear.classList.toggle('hidden', searchQuery.length === 0);
+    renderShop();
+  });
+  searchClear.addEventListener('click', () => {
+    searchQuery = '';
+    searchInput.value = '';
+    searchClear.classList.add('hidden');
+    renderShop();
+    searchInput.focus();
+  });
+
+  document.getElementById('app').addEventListener('click', (e) => {
+    const addBtn = e.target.closest('[data-add]');
+    if (addBtn) { addToCart(addBtn.dataset.add); return; }
+
+    const qtyBtn = e.target.closest('.qty-control button');
+    if (qtyBtn) {
+      const wrap = qtyBtn.closest('.qty-control');
+      const id = wrap.dataset.id;
+      if (qtyBtn.dataset.act === 'inc') incInCart(id); else decFromCart(id);
+      return;
+    }
+
+    const menuRow = e.target.closest('.menu-row');
+    if (menuRow) {
+      const action = menuRow.dataset.action;
+      if (action === 'orders') { showPage('orders'); return; }
+      if (action === 'invite') {
+        const link = 'https://t.me/RamzyAlbot?start=ref';
+        if (navigator.clipboard) { try { navigator.clipboard.writeText(link); } catch(e){} }
+        showToast('Реферальная ссылка скопирована');
+        return;
+      }
+      if (action === 'promo') { showToast('Активных промокодов пока нет'); return; }
+      if (action === 'support') { showToast('Открываю чат поддержки…'); return; }
+      if (action === 'about') { showToast('AI Shop — магазин подписок и токенов для нейросетей'); return; }
+      return;
+    }
+
+    const card = e.target.closest('.card, .token-row');
+    if (card) openDetail(card.dataset.id);
+  });
+
+  document.getElementById('topupBtn').addEventListener('click', () => {
+    showToast('Пополнение через СБП/карту — демо');
+  });
+
+  cartBody.addEventListener('click', (e) => {
+    const qtyBtn = e.target.closest('.qty-control button');
+    if (!qtyBtn) return;
+    const wrap = qtyBtn.closest('.qty-control');
+    const id = wrap.dataset.id;
+    if (qtyBtn.dataset.act === 'inc') incInCart(id); else decFromCart(id);
+  });
+
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const nav = item.dataset.nav;
+      if (nav === 'cart') { openCart(); return; }
+      showPage(nav === 'home' ? 'shop' : nav);
+    });
+  });
+
+  document.getElementById('cartClose').addEventListener('click', closeCart);
+  cartOverlay.addEventListener('click', closeCart);
+  document.getElementById('detailClose').addEventListener('click', closeDetail);
+  detailOverlay.addEventListener('click', closeDetail);
+
+  // ---------------- INIT ----------------
+  renderShop();
+  updateCartBadge();
+  updateMainButton();
+  authWithServer();
+})();
+</script>
+</body>
+</html>
