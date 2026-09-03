@@ -1,3 +1,7 @@
+// Vercel serverless-функция: любой файл в /api/*.js Vercel автоматически
+// превращает в эндпоинт (этот файл -> POST /api/auth). Никакой Express и
+// vercel.json тут не нужны — это и есть "zero-config" подход Vercel.
+
 const { validateInitData, getOrCreateUser } = require('../lib/telegramAuth');
 
 module.exports = (req, res) => {
