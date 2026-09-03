@@ -205,6 +205,24 @@
     transition: border-color .15s ease;
   }
   .card:active{ border-color: var(--border); }
+  .card-icon,
+  .token-icon,
+  .sub-card-icon,
+  .order-icon,
+  .cart-item-icon,
+  .detail-icon{
+    color: var(--text);
+  }
+  .card-icon svg,
+  .token-icon svg,
+  .sub-card-icon svg,
+  .order-icon svg,
+  .cart-item-icon svg,
+  .detail-icon svg{
+    width: 52%;
+    height: 52%;
+  }
+
   .card-icon{
     width:38px; height:38px; border-radius:11px;
     background: var(--bg-raise-2);
@@ -722,38 +740,52 @@
 
   // ---------------- DATA ----------------
   const PRODUCTS = [
-    { id:'sub-gpt', cat:'subs', icon:'✨', name:'ChatGPT Plus', desc:'GPT-5, безлимит сообщений, приоритет', price:990, oldPrice:1290, unit:'/мес', badge:'-23%',
+    { id:'sub-gpt', cat:'subs', icon:'openai', name:'ChatGPT Plus', desc:'GPT-5, безлимит сообщений, приоритет', price:990, oldPrice:1290, unit:'/мес', badge:'-23%',
       features:['Модель GPT-5 без ограничений','Генерация изображений','Приоритетный доступ в часы пик','Голосовой режим'],
       plans:[{len:'1 месяц',price:990},{len:'3 месяца',price:2690},{len:'12 месяцев',price:9990}] },
-    { id:'sub-claude', cat:'subs', icon:'🎭', name:'Claude Pro', desc:'Claude Opus/Sonnet, большой контекст', price:1090, unit:'/мес',
+    { id:'sub-claude', cat:'subs', icon:'anthropic', name:'Claude Pro', desc:'Claude Opus/Sonnet, большой контекст', price:1090, unit:'/мес',
       features:['Модели Opus и Sonnet','Контекст до 200k токенов','Claude Code включён','Проекты и артефакты'],
       plans:[{len:'1 месяц',price:1090},{len:'3 месяца',price:2990},{len:'12 месяцев',price:10900}] },
     { id:'sub-mj', cat:'images', icon:'🎨', name:'Midjourney Standard', desc:'Безлимит изображений в расслабленном режиме', price:1450, unit:'/мес',
       features:['Безлимит генераций (relax)','15 часов fast-режима','Коммерческое использование','Доступ к галерее'],
       plans:[{len:'1 месяц',price:1450},{len:'12 месяцев',price:13900}] },
-    { id:'sub-suno', cat:'subs', icon:'🎵', name:'Suno Pro', desc:'Генерация музыки, 500 треков/мес', price:790, unit:'/мес',
+    { id:'sub-suno', cat:'subs', icon:'suno', name:'Suno Pro', desc:'Генерация музыки, 500 треков/мес', price:790, unit:'/мес',
       features:['500 генераций в месяц','Коммерческая лицензия','Без водяных знаков','Приоритетная очередь'],
       plans:[{len:'1 месяц',price:790},{len:'12 месяцев',price:7900}] },
-    { id:'img-dalle', cat:'images', icon:'🖼️', name:'DALL·E пакет', desc:'300 генераций изображений', price:650, unit:'',
+    { id:'img-dalle', cat:'images', icon:'openai', name:'DALL·E пакет', desc:'300 генераций изображений', price:650, unit:'',
       features:['300 изображений HD','Любые пропорции','Коммерческое использование'],
       plans:[{len:'300 шт.',price:650},{len:'1000 шт.',price:1890}] },
-    { id:'tool-cursor', cat:'tools', icon:'⌨️', name:'Cursor Pro', desc:'AI-редактор кода, безлимит автокомплита', price:1590, unit:'/мес',
+    { id:'tool-cursor', cat:'tools', icon:'cursor', name:'Cursor Pro', desc:'AI-редактор кода, безлимит автокомплита', price:1590, unit:'/мес',
       features:['Безлимитный автокомплит','500 быстрых запросов GPT-5/Claude','Работа с большими репозиториями'],
       plans:[{len:'1 месяц',price:1590},{len:'12 месяцев',price:15900}] },
-    { id:'tool-elevenlabs', cat:'tools', icon:'🔊', name:'ElevenLabs Creator', desc:'Озвучка текста, клонирование голоса', price:990, unit:'/мес',
+    { id:'tool-elevenlabs', cat:'tools', icon:'elevenlabs', name:'ElevenLabs Creator', desc:'Озвучка текста, клонирование голоса', price:990, unit:'/мес',
       features:['100 000 символов/мес','Клонирование голоса','30 языков'],
       plans:[{len:'1 месяц',price:990},{len:'12 месяцев',price:9900}] },
   ];
 
   const TOKENS = [
-    { id:'tok-gpt-100', cat:'tokens', icon:'🟢', name:'OpenAI API — 100k токенов', meta:'GPT-5 / GPT-5-mini · не сгорают', price:390 },
-    { id:'tok-gpt-500', cat:'tokens', icon:'🟢', name:'OpenAI API — 500k токенов', meta:'GPT-5 / GPT-5-mini · не сгорают', price:1690 },
-    { id:'tok-claude-100', cat:'tokens', icon:'🟠', name:'Anthropic API — 100k токенов', meta:'Claude Opus/Sonnet · не сгорают', price:450 },
-    { id:'tok-claude-500', cat:'tokens', icon:'🟠', name:'Anthropic API — 500k токенов', meta:'Claude Opus/Sonnet · не сгорают', price:1990 },
+    { id:'tok-gpt-100', cat:'tokens', icon:'openai', name:'OpenAI API — 100k токенов', meta:'GPT-5 / GPT-5-mini · не сгорают', price:390 },
+    { id:'tok-gpt-500', cat:'tokens', icon:'openai', name:'OpenAI API — 500k токенов', meta:'GPT-5 / GPT-5-mini · не сгорают', price:1690 },
+    { id:'tok-claude-100', cat:'tokens', icon:'anthropic', name:'Anthropic API — 100k токенов', meta:'Claude Opus/Sonnet · не сгорают', price:450 },
+    { id:'tok-claude-500', cat:'tokens', icon:'anthropic', name:'Anthropic API — 500k токенов', meta:'Claude Opus/Sonnet · не сгорают', price:1990 },
     { id:'tok-mj-fast', cat:'tokens', icon:'🟣', name:'Midjourney Fast-часы ×10', meta:'Разовая покупка, не требует подписки', price:890 },
   ];
 
   const ALL_ITEMS = [...PRODUCTS, ...TOKENS];
+
+  // Официальные векторные логотипы (fill="currentColor" — красятся через CSS color
+  // родителя). Для брендов без готовой иконки (Midjourney) остаётся эмодзи-фолбэк.
+  const BRAND_ICONS = {
+    openai: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg>',
+    anthropic: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.3041 3.541h-3.6718l6.696 16.918H24Zm-10.6082 0L0 20.459h3.7442l1.3693-3.5527h7.0052l1.3693 3.5528h3.7442L10.5363 3.5409Zm-.3712 10.2232 2.2914-5.9456 2.2914 5.9456Z"/></svg>',
+    cursor: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.503.131 1.891 5.678a.84.84 0 0 0-.42.726v11.188c0 .3.162.575.42.724l9.609 5.55a1 1 0 0 0 .998 0l9.61-5.55a.84.84 0 0 0 .42-.724V6.404a.84.84 0 0 0-.42-.726L12.497.131a1.01 1.01 0 0 0-.996 0M2.657 6.338h18.55c.263 0 .43.287.297.515L12.23 22.918c-.062.107-.229.064-.229-.06V12.335a.59.59 0 0 0-.295-.51l-9.11-5.257c-.109-.063-.064-.23.061-.23"/></svg>',
+    elevenlabs: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.6035 0v24h4.9317V0zm9.8613 0v24h4.9317V0z"/></svg>',
+    suno: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 0C20.642 0 24 5.373 24 12h-9c0 6.627-3.358 12-7.5 12C3.358 24 0 18.627 0 12h9c0-6.627 3.358-12 7.5-12Z"/></svg>',
+  };
+
+  function iconMarkup(icon){
+    return BRAND_ICONS[icon] || icon;
+  }
 
   const ACTIVE_SUBS = [
     { id:'sub-gpt', started:'28 авг', daysLeft:25, totalDays:30 },
@@ -786,7 +818,7 @@
     return `
     <div class="card" data-id="${p.id}">
       ${p.badge ? `<div class="card-badge">${p.badge}</div>` : ''}
-      <div class="card-icon">${p.icon}</div>
+      <div class="card-icon">${iconMarkup(p.icon)}</div>
       <div class="card-name">${p.name}</div>
       <div class="card-desc">${p.desc}</div>
       <div class="card-bottom">
@@ -805,7 +837,7 @@
     const qty = cart[t.id] || 0;
     return `
     <div class="token-row" data-id="${t.id}">
-      <div class="token-icon">${t.icon}</div>
+      <div class="token-icon">${iconMarkup(t.icon)}</div>
       <div class="token-info">
         <div class="token-name">${t.name}</div>
         <div class="token-meta">${t.meta}</div>
@@ -875,7 +907,7 @@
       return `
       <div class="sub-card">
         <div class="sub-card-top">
-          <div class="sub-card-icon">${item.icon}</div>
+          <div class="sub-card-icon">${iconMarkup(item.icon)}</div>
           <div class="sub-card-info">
             <div class="sub-card-name">${item.name}</div>
             <div class="sub-card-exp">с ${s.started} · осталось ${s.daysLeft} дн.</div>
@@ -898,7 +930,7 @@
       const st = statusMeta[o.status];
       return `
       <div class="order-row">
-        <div class="order-icon">${item.icon}</div>
+        <div class="order-icon">${iconMarkup(item.icon)}</div>
         <div class="order-info">
           <div class="order-name">${item.name}</div>
           <div class="order-meta">${o.date}</div>
@@ -1013,7 +1045,7 @@
       const item = ALL_ITEMS.find(i => i.id === id);
       return `
       <div class="cart-item">
-        <div class="cart-item-icon">${item.icon}</div>
+        <div class="cart-item-icon">${iconMarkup(item.icon)}</div>
         <div class="cart-item-info">
           <div class="cart-item-name">${item.name}</div>
           <div class="cart-item-price">${fmt(item.price)} ₽ ${item.unit||''} × ${qty}</div>
@@ -1082,7 +1114,7 @@
   function renderDetail(item){
     const plans = item.plans || [{len:'Покупка',price:item.price}];
     detailBody.innerHTML = `
-      <div class="detail-icon">${item.icon}</div>
+      <div class="detail-icon">${iconMarkup(item.icon)}</div>
       <div class="detail-name">${item.name}</div>
       <div class="detail-price">от ${fmt(Math.min(...plans.map(p=>p.price)))} ₽</div>
       <div class="detail-desc">${item.desc}</div>
