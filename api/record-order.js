@@ -54,7 +54,7 @@ module.exports = async (req, res) => {
   }
 
   const title = lines.join(', ');
-  const user = recordOrder(tgUser.id, { title, amount: total, currency: 'RUB' });
+  const user = await recordOrder(tgUser.id, { title, amount: total, currency: 'RUB' });
 
   try {
     if (BOT_TOKEN) {

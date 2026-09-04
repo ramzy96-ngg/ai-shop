@@ -4,7 +4,7 @@
 
 const { validateInitData, getOrCreateUser } = require('../lib/telegramAuth');
 
-module.exports = (req, res) => {
+module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).json({ ok: false, error: 'method_not_allowed' });
     return;
@@ -18,6 +18,6 @@ module.exports = (req, res) => {
     return;
   }
 
-  const user = getOrCreateUser(tgUser);
+  const user = await getOrCreateUser(tgUser);
   res.status(200).json({ ok: true, user });
 };

@@ -3,11 +3,14 @@
 // ПРОВЕРЕННОГО (initData подтверждён) пользователя — без стороннего
 // эквайринга, платёжный процессор тут сам Telegram.
 //
-// Сейчас это тестовая позиция за 1 звезду, чтобы проверить всю цепочку
-// end-to-end (создание счёта -> оплата -> вебхук -> подтверждение).
-// Реальный каталог с ценами в звёздах подключим отдельным шагом.
+// Принимает реальные товары из корзины, считает сумму по серверному
+// каталогу (клиенту не доверяем), проверяет остаток на складе — и только
+// потом выставляет счёт. Состав заказа кодируется в payload инвойса, чтобы
+// вебхук после оплаты знал, что именно выдавать.
 
 const { validateInitData } = require('../lib/telegramAuth');
+const { CATALOG, priceToStars } = require('../lib/catalog');
+const { getStockCounts } = require('../lib/stock');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
@@ -22,7 +25,7 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const initData = req.body && req.body.initData;
+  const { initData, items } = req.body || {};
   const tgUser = validateInitData(initData);
 
   if (!tgUser) {
@@ -30,18 +33,57 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const payload = `test_${tgUser.id}_${Date.now()}`;
+  if (!Array.isArray(items) || items.length === 0) {
+    res.status(400).json({ ok: false, error: 'empty_cart' });
+    return;
+  }
+
+  // Считаем сумму и одновременно нормализуем позиции по серверному каталогу.
+  let totalRub = 0;
+  const lines = [];
+  const payloadItems = []; // [[id, qty], ...]
+  const normalized = [];
+  for (const it of items) {
+    const entry = CATALOG[it && it.id];
+    if (!entry) continue;
+    const qty = Math.max(1, Math.min(99, Number(it.qty) || 1));
+    totalRub += entry.price * qty;
+    lines.push(`${entry.name} × ${qty}`);
+    payloadItems.push([it.id, qty]);
+    normalized.push({ id: it.id, qty });
+  }
+
+  if (totalRub <= 0) {
+    res.status(400).json({ ok: false, error: 'empty_cart' });
+    return;
+  }
+
+  // Проверяем остатки ДО выставления счёта — незачем предлагать оплатить
+  // то, чего нет на складе.
+  const stockCounts = await getStockCounts(normalized.map((n) => n.id));
+  const outOfStock = normalized.filter((n) => (stockCounts[n.id] || 0) < n.qty);
+  if (outOfStock.length > 0) {
+    res.status(409).json({
+      ok: false,
+      error: 'out_of_stock',
+      items: outOfStock.map((n) => ({ id: n.id, name: CATALOG[n.id]?.name, available: stockCounts[n.id] || 0 })),
+    });
+    return;
+  }
+
+  const amountStars = priceToStars(totalRub);
+  const payload = JSON.stringify({ u: tgUser.id, i: payloadItems }).slice(0, 128);
 
   try {
     const tgRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        title: 'Тестовая покупка',
-        description: 'Проверка оплаты через Telegram Stars',
+        title: 'AI Shop — заказ',
+        description: lines.join(', ').slice(0, 250),
         payload,
         currency: 'XTR',
-        prices: [{ label: 'Тест', amount: 1 }],
+        prices: [{ label: 'Заказ', amount: amountStars }],
       }),
     });
     const data = await tgRes.json();
