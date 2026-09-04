@@ -237,6 +237,12 @@
   }
   .card-name{ font-size:13.5px; font-weight:700; line-height:1.25; }
   .card-desc{ font-size:11px; color: var(--text-faint); line-height:1.4; min-height:28px; }
+  .stock-badge{
+    font-size:10px; font-weight:700; display:inline-block;
+    padding:2px 0; margin-top:-2px;
+  }
+  .stock-badge.low{ color: var(--warn); }
+  .stock-badge.out{ color: var(--danger); }
   .card-bottom{ display:flex; align-items:center; justify-content:space-between; margin-top:2px; }
   .price-block{ display:flex; flex-direction:column; }
   .price{ font-size:14px; font-weight:800; font-variant-numeric: tabular-nums; }
@@ -738,6 +744,20 @@
     }
   }
 
+  async function fetchStock(){
+    try {
+      const res = await fetch('/api/stock', { method: 'POST' });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.ok && data.stock) {
+        stockCounts = data.stock;
+        renderShop();
+      }
+    } catch (e) {
+      // бэкенда нет рядом — остатки просто не показываем, ничего не блокируем
+    }
+  }
+
   // ---------------- DATA ----------------
   const PRODUCTS = [
     { id:'sub-gpt', cat:'subs', icon:'openai', name:'ChatGPT Plus', desc:'GPT-5, безлимит сообщений, приоритет', price:990, oldPrice:1290, unit:'/мес', badge:'-23%',
@@ -805,6 +825,7 @@
   let currentPage = 'shop';
   let selectedPlanIdx = 0;
   let searchQuery = '';
+  let stockCounts = {}; // id -> остаток, подтягивается с /api/stock
 
   const fmt = n => n.toLocaleString('ru-RU');
 
@@ -813,40 +834,56 @@
   const tokensList = document.getElementById('tokensList');
   const imagesGrid = document.getElementById('imagesGrid');
 
+  function stockBadge(id){
+    const n = stockCounts[id];
+    if (typeof n !== 'number') return '';
+    if (n === 0) return `<div class="stock-badge out">Нет в наличии</div>`;
+    if (n <= 10) return `<div class="stock-badge low">Осталось: ${n}</div>`;
+    return '';
+  }
+
   function renderCard(p){
     const qty = cart[p.id] || 0;
+    const outOfStock = stockCounts[p.id] === 0;
     return `
     <div class="card" data-id="${p.id}">
       ${p.badge ? `<div class="card-badge">${p.badge}</div>` : ''}
       <div class="card-icon">${iconMarkup(p.icon)}</div>
       <div class="card-name">${p.name}</div>
       <div class="card-desc">${p.desc}</div>
+      ${stockBadge(p.id)}
       <div class="card-bottom">
         <div class="price-block">
           ${p.oldPrice ? `<div class="price-old">${fmt(p.oldPrice)} ₽</div>` : ''}
           <div class="price">${fmt(p.price)} ₽<span class="unit">${p.unit||''}</span></div>
         </div>
-        ${qty > 0
-          ? `<div class="qty-control" data-id="${p.id}"><button data-act="dec">−</button><span>${qty}</span><button data-act="inc">+</button></div>`
-          : `<button class="add-btn" data-add="${p.id}">+</button>`}
+        ${outOfStock
+          ? `<button class="add-btn" disabled style="opacity:.35">+</button>`
+          : qty > 0
+            ? `<div class="qty-control" data-id="${p.id}"><button data-act="dec">−</button><span>${qty}</span><button data-act="inc">+</button></div>`
+            : `<button class="add-btn" data-add="${p.id}">+</button>`}
       </div>
     </div>`;
   }
 
   function renderTokenRow(t){
     const qty = cart[t.id] || 0;
+    const outOfStock = stockCounts[t.id] === 0;
     return `
     <div class="token-row" data-id="${t.id}">
       <div class="token-icon">${iconMarkup(t.icon)}</div>
       <div class="token-info">
         <div class="token-name">${t.name}</div>
         <div class="token-meta">${t.meta}</div>
+        ${stockBadge(t.id)}
       </div>
       <div class="token-right">
         <div class="price">${fmt(t.price)} ₽</div>
-        ${qty > 0
-          ? `<div class="qty-control" data-id="${t.id}"><button data-act="dec">−</button><span>${qty}</span><button data-act="inc">+</button></div>`
-          : `<button class="add-btn" data-add="${t.id}">+</button>`}
+        ${outOfStock
+          ? `<button class="add-btn" disabled style="opacity:.35">+</button>`
+          : qty > 0
+            ? `<div class="qty-control" data-id="${t.id}"><button data-act="dec">−</button><span>${qty}</span><button data-act="inc">+</button></div>`
+            : `<button class="add-btn" data-add="${t.id}">+</button>`}
       </div>
     </div>`;
   }
@@ -1089,62 +1126,64 @@
     }).join('');
 
     const total = cartTotal();
-    const discount = total >= 3000 ? Math.round(total*0.05) : 0;
-    const finalTotal = total - discount;
     cartFooter.innerHTML = `
-      <div class="total-row"><span>Сумма</span><span>${fmt(total)} ₽</span></div>
-      ${discount ? `<div class="total-row"><span>Скидка</span><span>−${fmt(discount)} ₽</span></div>` : ''}
-      <div class="total-row main"><span>Итого</span><span>${fmt(finalTotal)} ₽</span></div>
-      <button class="checkout-btn" id="checkoutBtn">Оформить заказ · ${fmt(finalTotal)} ₽</button>
+      <div class="total-row main"><span>Итого</span><span>${fmt(total)} ₽</span></div>
+      <button class="checkout-btn" id="checkoutBtn">Оплатить звёздами</button>
     `;
     document.getElementById('checkoutBtn').addEventListener('click', checkout);
   }
 
-  function checkout(){
+  async function checkout(){
     if (cartCount() === 0) return;
-    const total = cartTotal();
-    let asked = false;
-    try {
-      if (tg && tg.showConfirm) {
-        tg.showConfirm(`Оплатить ${fmt(total)} ₽ и получить доступ?`, (ok) => {
-          if (ok) completeOrder();
-        });
-        asked = true;
-      }
-    } catch (e) { asked = false; }
-    if (!asked) {
-      if (window.confirm(`Оплатить ${fmt(total)} ₽ и получить доступ?`)) completeOrder();
-    }
-  }
 
-  async function completeOrder(){
-    try { if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success'); } catch(e){}
+    if (!tg || !tg.initData || !tg.openInvoice) {
+      showToast('Открой мини-апп внутри Telegram, чтобы оплатить');
+      return;
+    }
 
     const items = Object.entries(cart).map(([id, qty]) => ({ id, qty }));
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    if (checkoutBtn) { checkoutBtn.disabled = true; checkoutBtn.textContent = 'Создаём счёт…'; }
 
-    cart = {};
-    onCartChange();
-    closeCart();
+    try {
+      const res = await fetch('/api/create-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: tg.initData, items }),
+      });
+      const data = await res.json();
 
-    if (tg && tg.initData) {
-      try {
-        const res = await fetch('/api/record-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ initData: tg.initData, items }),
-        });
-        const data = await res.json();
-        if (data && data.ok) {
-          showToast('✅ Заказ оформлен! Подтверждение пришло в чат');
-          authWithServer();
-          if (currentPage === 'orders') { renderActiveSubs(); renderOrderHistory(); }
-          return;
+      if (!data.ok) {
+        if (data.error === 'out_of_stock' && Array.isArray(data.items)) {
+          const names = data.items.map(i => `${i.name} (осталось ${i.available})`).join(', ');
+          showToast('Нет в наличии: ' + names);
+          fetchStock();
+        } else {
+          showToast('Не удалось создать счёт: ' + (data.error || 'ошибка'));
         }
-      } catch (e) {
-        // сеть недоступна — покажем обычное подтверждение ниже
+        if (checkoutBtn) { checkoutBtn.disabled = false; checkoutBtn.textContent = 'Оплатить звёздами'; }
+        return;
       }
+
+      tg.openInvoice(data.invoiceLink, (status) => {
+        if (status === 'paid') {
+          showToast('✅ Оплата прошла! Доступ пришёл в чат с ботом');
+          cart = {};
+          onCartChange();
+          closeCart();
+          authWithServer();
+          fetchStock();
+          if (currentPage === 'orders') { renderActiveSubs(); renderOrderHistory(); }
+        } else {
+          if (checkoutBtn) { checkoutBtn.disabled = false; checkoutBtn.textContent = 'Оплатить звёздами'; }
+          if (status === 'cancelled') showToast('Оплата отменена');
+          else if (status === 'failed') showToast('Оплата не прошла');
+        }
+      });
+    } catch (e) {
+      showToast('Ошибка сети при создании счёта');
+      if (checkoutBtn) { checkoutBtn.disabled = false; checkoutBtn.textContent = 'Оплатить звёздами'; }
     }
-    showToast('✅ Заказ оформлен! Доступ придёт в чат с ботом');
   }
 
   // ---------------- DETAIL SHEET ----------------
@@ -1350,6 +1389,7 @@
   updateCartBadge();
   updateMainButton();
   authWithServer();
+  fetchStock();
 })();
 </script>
 </body>
