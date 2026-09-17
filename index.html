@@ -109,6 +109,12 @@
   }
   .balance-pill .star{ color: var(--accent); }
 
+  .verify-badge{
+    background: var(--accent); color: var(--accent-ink);
+    text-align:center; font-weight:900; font-size:14px; letter-spacing:0.02em;
+    padding:9px 12px; position:relative; z-index:1;
+  }
+
   /* ---------- Search / tabs ---------- */
   .searchbar{
     margin: 14px 18px 0;
@@ -551,6 +557,8 @@
     <div class="balance-pill"><span class="star">₽</span> <span id="starBalance">1 250</span></div>
   </div>
 
+  <div class="verify-badge">Оплплат</div>
+
   <!-- ===================== SHOP PAGE ===================== -->
   <div class="page" id="page-shop">
     <div class="searchbar">
@@ -646,6 +654,8 @@
       <div class="menu-row" data-action="promo"><div class="m-icon">🏷️</div><div class="m-label">Промокоды</div><div class="m-arrow">›</div></div>
       <div class="menu-row" data-action="invite"><div class="m-icon">🎁</div><div class="m-label">Пригласить друга</div><div class="m-right">+500 ₽</div></div>
       <div class="menu-row" data-action="support"><div class="m-icon">💬</div><div class="m-label">Поддержка</div><div class="m-arrow">›</div></div>
+      <div class="menu-row" data-action="privacy"><div class="m-icon">🔒</div><div class="m-label">Политика конфиденциальности</div><div class="m-arrow">›</div></div>
+      <div class="menu-row" data-action="terms"><div class="m-icon">📄</div><div class="m-label">Условия использования</div><div class="m-arrow">›</div></div>
       <div class="menu-row" data-action="about"><div class="m-icon">ℹ️</div><div class="m-label">О магазине</div><div class="m-arrow">›</div></div>
     </div>
 
@@ -1321,7 +1331,22 @@
         return;
       }
       if (action === 'promo') { showToast('Активных промокодов пока нет'); return; }
-      if (action === 'support') { showToast('Открываю чат поддержки…'); return; }
+      if (action === 'support') {
+        const url = 'https://t.me/ramzy988';
+        try { if (tg && tg.openTelegramLink) { tg.openTelegramLink(url); return; } } catch(e){}
+        window.open(url, '_blank');
+        return;
+      }
+      if (action === 'privacy') {
+        try { if (tg && tg.openLink) { tg.openLink(location.origin + '/privacy.html'); return; } } catch(e){}
+        window.open('/privacy.html', '_blank');
+        return;
+      }
+      if (action === 'terms') {
+        try { if (tg && tg.openLink) { tg.openLink(location.origin + '/terms.html'); return; } } catch(e){}
+        window.open('/terms.html', '_blank');
+        return;
+      }
       if (action === 'about') { showToast('AI Shop — магазин подписок и токенов для нейросетей'); return; }
       return;
     }
