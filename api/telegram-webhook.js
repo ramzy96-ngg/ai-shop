@@ -46,6 +46,74 @@ function itemsTitle(payloadItems) {
     .join(', ');
 }
 
+const SUPPORT_USERNAME = 'ramzy988';
+
+// Кнопки с юридическими документами и поддержкой — показываем в приветствии
+// и по командам, чтобы всё было доступно прямо в чате с ботом.
+function docsKeyboard(origin) {
+  return [
+    [{ text: '📄 Пользовательское соглашение', url: `${origin}/terms.html` }],
+    [{ text: '🔒 Политика конфиденциальности', url: `${origin}/privacy.html` }],
+    [{ text: '💬 Поддержка', url: `https://t.me/${SUPPORT_USERNAME}` }],
+  ];
+}
+
+function formatRub(n) {
+  return n.toLocaleString('ru-RU') + ' ₽';
+}
+
+// Публичные команды (доступны всем). Возвращает true, если команда обработана.
+async function handlePublicCommand(cmd, chatId, origin) {
+  if (cmd === '/terms') {
+    await callTelegram('sendMessage', {
+      chat_id: chatId,
+      text: '📄 Пользовательское соглашение AI Shop:\n' + `${origin}/terms.html`,
+      reply_markup: { inline_keyboard: [[{ text: 'Открыть соглашение', url: `${origin}/terms.html` }]] },
+    });
+    return true;
+  }
+  if (cmd === '/privacy') {
+    await callTelegram('sendMessage', {
+      chat_id: chatId,
+      text: '🔒 Политика конфиденциальности AI Shop:\n' + `${origin}/privacy.html`,
+      reply_markup: { inline_keyboard: [[{ text: 'Открыть политику', url: `${origin}/privacy.html` }]] },
+    });
+    return true;
+  }
+  if (cmd === '/support') {
+    await callTelegram('sendMessage', {
+      chat_id: chatId,
+      text: `💬 Поддержка: @${SUPPORT_USERNAME}\nПо вопросам заказов, оплаты и возвратов пишите сюда.`,
+      reply_markup: { inline_keyboard: [[{ text: 'Написать в поддержку', url: `https://t.me/${SUPPORT_USERNAME}` }]] },
+    });
+    return true;
+  }
+  if (cmd === '/prices') {
+    const lines = Object.values(CATALOG).map((p) => `• ${p.name} — ${formatRub(p.price)}`);
+    await callTelegram('sendMessage', {
+      chat_id: chatId,
+      text: '💰 Актуальные цены AI Shop:\n\n' + lines.join('\n') + '\n\nПодробнее — в магазине и в пользовательском соглашении.',
+      reply_markup: { inline_keyboard: [[{ text: '🛍 Открыть магазин', web_app: { url: origin } }]] },
+    });
+    return true;
+  }
+  if (cmd === '/help') {
+    await callTelegram('sendMessage', {
+      chat_id: chatId,
+      text:
+        'Доступные команды:\n' +
+        '/start — главное меню\n' +
+        '/prices — цены и тарифы\n' +
+        '/terms — пользовательское соглашение\n' +
+        '/privacy — политика конфиденциальности\n' +
+        '/support — поддержка',
+      reply_markup: { inline_keyboard: docsKeyboard(origin) },
+    });
+    return true;
+  }
+  return false;
+}
+
 async function handleAdminCommand(chatId, text) {
   if (text.startsWith('/addstock')) {
     const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
@@ -97,21 +165,30 @@ module.exports = async (req, res) => {
     const msg = update.message;
     const isAdmin = ADMIN_TELEGRAM_ID && msg && msg.from && String(msg.from.id) === String(ADMIN_TELEGRAM_ID);
 
-    if (isAdmin && typeof msg.text === 'string' && (msg.text.startsWith('/addstock') || msg.text.startsWith('/stock'))) {
-      await handleAdminCommand(msg.chat.id, msg.text);
-    } else if (msg && typeof msg.text === 'string' && msg.text.startsWith('/start')) {
+    const text = msg && typeof msg.text === 'string' ? msg.text : '';
+    // Команда без хвоста "@botname" и без аргументов: "/terms@Bot arg" -> "/terms"
+    const cmd = text.startsWith('/') ? text.split(/[\s@]/)[0].toLowerCase() : '';
+
+    if (cmd === '/addstock' || cmd === '/stock') {
+      // Админ-команды: не-админам молча не отвечаем.
+      if (isAdmin) await handleAdminCommand(msg.chat.id, text);
+    } else if (cmd === '/start') {
       await callTelegram('sendPhoto', {
         chat_id: msg.chat.id,
         photo: `${origin}/banner.jpg`,
         caption:
           '<b>AI Shop</b> — подписки и токены для нейросетей\n\n' +
           'ChatGPT, Claude, Midjourney, Cursor и другое в одном месте. ' +
-          'Оплата картой и СБП, доступ приходит прямо в этот чат.',
+          'Оплата картой и СБП, доступ приходит прямо в этот чат.\n\n' +
+          'Оформляя заказ, вы соглашаетесь с пользовательским соглашением и политикой конфиденциальности (кнопки ниже). ' +
+          'Актуальные цены: /prices',
         parse_mode: 'HTML',
         reply_markup: {
-          inline_keyboard: [[{ text: '🛍 Открыть магазин', web_app: { url: origin } }]],
+          inline_keyboard: [[{ text: '🛍 Открыть магазин', web_app: { url: origin } }], ...docsKeyboard(origin)],
         },
       });
+    } else if (cmd && (await handlePublicCommand(cmd, msg.chat.id, origin))) {
+      // обработано публичной командой
     } else if (update.pre_checkout_query) {
       const q = update.pre_checkout_query;
       const parsed = parsePayload(q.invoice_payload);
