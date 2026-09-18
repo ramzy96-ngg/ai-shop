@@ -109,6 +109,13 @@
   }
   .balance-pill .star{ color: var(--accent); }
 
+  .legal-footer{
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    padding: 28px 18px 8px; position:relative; z-index:1;
+  }
+  .legal-footer a{ color: var(--text-faint); font-size:12px; font-weight:600; text-decoration:none; }
+  .legal-footer a:hover{ color: var(--accent); }
+
   .verify-badge{
     background: var(--accent); color: var(--accent-ink);
     text-align:center; font-weight:900; font-size:14px; letter-spacing:0.02em;
@@ -605,6 +612,12 @@
     </div>
 
     <div class="search-empty hidden" id="searchEmpty">Ничего не найдено. Попробуйте другой запрос.</div>
+
+    <div class="legal-footer">
+      <a href="/terms.html" target="_blank" rel="noopener">Пользовательское соглашение</a>
+      <a href="/privacy.html" target="_blank" rel="noopener">Политика конфиденциальности</a>
+      <a href="https://t.me/ramzy988" target="_blank" rel="noopener">Поддержка @ramzy988</a>
+    </div>
   </div>
 
   <!-- ===================== ORDERS PAGE ===================== -->
