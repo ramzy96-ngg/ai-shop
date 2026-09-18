@@ -109,6 +109,26 @@
   }
   .balance-pill .star{ color: var(--accent); }
 
+  .gate{
+    position:fixed; inset:0; z-index:100; background: var(--bg);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .gate.hidden{ display:none; }
+  .gate-body{ flex:1; overflow-y:auto; padding: 22px 20px 12px; }
+  .gate-brand{ display:flex; align-items:center; gap:10px; margin-bottom:18px; }
+  .gate-brand .logo{
+    width:36px; height:36px; border-radius:10px; background: var(--accent); color: var(--accent-ink);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .gate-title{ font-size:24px; font-weight:900; letter-spacing:-0.01em; margin-bottom:8px; text-wrap:balance; }
+  .gate-lead{ font-size:13.5px; color: var(--text-dim); margin:0 0 12px; }
+  .gate-points{ margin:0 0 16px; padding-left:18px; }
+  .gate-points li{ font-size:13px; color: var(--text-dim); line-height:1.5; margin-bottom:9px; }
+  .gate-points a, .gate-links a{ color: var(--accent); text-decoration:none; font-weight:600; }
+  .gate-links{ display:flex; flex-direction:column; gap:8px; font-size:13px; }
+  .gate-footer{ padding: 12px 20px calc(16px + env(safe-area-inset-bottom)); border-top:1px solid var(--border-soft); background: var(--bg); }
+  .gate-note{ font-size:11px; color: var(--text-faint); line-height:1.45; margin-top:10px; text-align:center; }
+
   .legal-footer{
     display:flex; flex-direction:column; align-items:center; gap:8px;
     padding: 28px 18px 8px; position:relative; z-index:1;
@@ -719,6 +739,35 @@
   </div>
   <div class="sheet-body">
     <div class="detail-body" id="detailBody"></div>
+  </div>
+</div>
+
+<div class="gate" id="termsGate">
+  <div class="verify-badge">Оплплат</div>
+  <div class="gate-body">
+    <div class="gate-brand">
+      <div class="logo">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z" fill="currentColor"/></svg>
+      </div>
+      <div class="brand-title">AI SHOP</div>
+    </div>
+    <h1 class="gate-title">Пользовательское соглашение</h1>
+    <p class="gate-lead">Перед входом в магазин ознакомьтесь с основными условиями:</p>
+    <ul class="gate-points">
+      <li>Магазин продаёт цифровые товары: подписки и API-токены AI-сервисов. Товар выдаётся автоматически в чат с ботом сразу после оплаты.</li>
+      <li>Актуальные цены показываются в каталоге до оплаты. Оплата — Telegram Stars, банковской картой или через СБП.</li>
+      <li>Товар цифровой, поэтому после выдачи возврат не производится, кроме случаев технического сбоя. Претензии — в течение 24 часов после оплаты.</li>
+      <li>Мы обрабатываем только минимум данных (Telegram ID, имя, username, история заказов) и не запрашиваем данные карт.</li>
+      <li>Поддержка: <a href="https://t.me/ramzy988" target="_blank" rel="noopener">@ramzy988</a></li>
+    </ul>
+    <div class="gate-links">
+      <a href="/terms.html" target="_blank" rel="noopener">Полный текст соглашения</a>
+      <a href="/privacy.html" target="_blank" rel="noopener">Политика конфиденциальности</a>
+    </div>
+  </div>
+  <div class="gate-footer">
+    <button class="checkout-btn" id="termsAcceptBtn">Принимаю условия и вхожу в магазин</button>
+    <div class="gate-note">Нажимая кнопку, вы подтверждаете, что ознакомились и согласны с Пользовательским соглашением и Политикой конфиденциальности.</div>
   </div>
 </div>
 
@@ -1421,6 +1470,29 @@
   cartOverlay.addEventListener('click', closeCart);
   document.getElementById('detailClose').addEventListener('click', closeDetail);
   detailOverlay.addEventListener('click', closeDetail);
+
+  // ---------------- TERMS GATE ----------------
+  const TERMS_KEY = 'ai_shop_terms_2026-09-18';
+  const termsGate = document.getElementById('termsGate');
+
+  function termsAccepted(){
+    try { return localStorage.getItem(TERMS_KEY) === '1'; } catch(e){ return false; }
+  }
+
+  if (termsAccepted()) termsGate.classList.add('hidden');
+
+  document.getElementById('termsAcceptBtn').addEventListener('click', () => {
+    try { localStorage.setItem(TERMS_KEY, '1'); } catch(e){}
+    termsGate.classList.add('hidden');
+    try { if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light'); } catch(e){}
+    if (tg && tg.initData) {
+      fetch('/api/accept-terms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: tg.initData }),
+      }).catch(() => {});
+    }
+  });
 
   // ---------------- INIT ----------------
   renderShop();
