@@ -53,8 +53,10 @@ const SUPPORT_USERNAME = 'ramzy988';
 function docsKeyboard(origin) {
   return [
     [{ text: '📄 Пользовательское соглашение', url: `${origin}/terms.html` }],
-    [{ text: '🔒 Политика конфиденциальности', url: `${origin}/privacy.html` }],
-    [{ text: '💬 Поддержка', url: `https://t.me/${SUPPORT_USERNAME}` }],
+    [
+      { text: '🔒 Конфиденциальность', url: `${origin}/privacy.html` },
+      { text: '💬 Поддержка', url: `https://t.me/${SUPPORT_USERNAME}` },
+    ],
   ];
 }
 
@@ -180,7 +182,7 @@ module.exports = async (req, res) => {
           '<b>AI Shop</b> — подписки и токены для нейросетей\n\n' +
           'ChatGPT, Claude, Midjourney, Cursor и другое в одном месте. ' +
           'Оплата картой и СБП, доступ приходит прямо в этот чат.\n\n' +
-          'Оформляя заказ, вы соглашаетесь с пользовательским соглашением и политикой конфиденциальности (кнопки ниже). ' +
+          '<b>Нажимая «Открыть магазин», вы подтверждаете, что ознакомились и согласны с Пользовательским соглашением и Политикой конфиденциальности</b> (кнопки ниже).\n\n' +
           'Актуальные цены: /prices',
         parse_mode: 'HTML',
         reply_markup: {
