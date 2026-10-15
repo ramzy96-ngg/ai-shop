@@ -13,6 +13,7 @@
 const { recordOrder } = require('../lib/telegramAuth');
 const { CATALOG } = require('../lib/catalog');
 const { getStockCounts, claimStockItem, addStock } = require('../lib/stock');
+const { notifyAdmin } = require('../lib/notify');
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const ADMIN_TELEGRAM_ID = process.env.ADMIN_TELEGRAM_ID; // твой telegram_id, см. инструкцию
@@ -268,6 +269,10 @@ module.exports = async (req, res) => {
             chat_id: chatId,
             text: `✅ Оплата прошла! Списано ${payment.total_amount} ⭐.\n\nВаш заказ:\n${codesText}`,
           });
+
+          await notifyAdmin(
+            `💰 Новая продажа (Stars)\n${title}\nСумма: ${payment.total_amount} ⭐\nПокупатель: ${fromId}${msg.from && msg.from.username ? ' @' + msg.from.username : ''}`
+          );
         }
       }
     }
