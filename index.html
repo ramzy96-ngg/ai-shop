@@ -611,7 +611,7 @@
         <div class="brand-sub">Подписки и токены для нейросетей</div>
       </div>
     </div>
-    <div class="balance-pill"><span class="star">₽</span> <span id="starBalance">1 250</span></div>
+    <div class="balance-pill"><span class="star">₽</span> <span id="starBalance">0</span></div>
   </div>
 
   <div class="verify-badge">Оплплат</div>
@@ -674,7 +674,7 @@
     <div class="balance-card">
       <div>
         <div class="balance-card-label">Баланс</div>
-        <div class="balance-card-value"><span class="star">₽</span> <span id="profileBalance">1 250</span></div>
+        <div class="balance-card-value"><span class="star">₽</span> <span id="profileBalance">0</span></div>
       </div>
       <button class="topup-btn" id="topupBtn">Пополнить</button>
     </div>
@@ -1492,7 +1492,16 @@
     pollingPayment = true;
     for (let i = 0; i < 10 && awaitingPayment; i++) {
       const user = await authWithServer();
-      if (user && (user.ordersCount || 0) > awaitingPayment.ordersBefore) {
+      if (user && awaitingPayment.balanceBefore !== undefined) {
+        // пополнение баланса: ждём, пока на сервере вырастет баланс
+        if ((user.balance || 0) > awaitingPayment.balanceBefore) {
+          awaitingPayment = null;
+          closeDetail();
+          showToast('✅ Баланс пополнен');
+          if (currentPage === 'orders') { renderOrderHistory(); }
+          break;
+        }
+      } else if (user && (user.ordersCount || 0) > awaitingPayment.ordersBefore) {
         awaitingPayment = null;
         cart = {};
         onCartChange();
@@ -1882,38 +1891,93 @@
     if (card) openDetail(card.dataset.id);
   });
 
-  document.getElementById('topupBtn').addEventListener('click', async () => {
-    if (!tg || !tg.initData || !tg.openInvoice) {
-      showToast('Открой мини-апп внутри Telegram, чтобы протестировать оплату');
+  // ---------- Пополнение баланса ----------
+  const TOPUP_MIN = 50, TOPUP_MAX = 100000;
+
+  function openTopup(){
+    detailBody.innerHTML = `
+      <div class="detail-name">Пополнение баланса</div>
+      <div class="detail-desc">Баланс растёт ровно на ту сумму, которую вы оплатили. Оплата картой или СБП.</div>
+      <div class="calc">
+        <div class="calc-field">
+          <span class="calc-cur">₽</span>
+          <input id="topupInput" type="text" inputmode="numeric" autocomplete="off" placeholder="Сумма пополнения, например 500">
+        </div>
+        <div class="calc-chips" id="topupChips">
+          ${[100, 300, 500, 1000, 2000, 5000].map(v => `<div class="calc-chip" data-v="${v}">${fmt(v)} ₽</div>`).join('')}
+        </div>
+        <div class="calc-hint" id="topupHint">Минимум ${fmt(TOPUP_MIN)} ₽, максимум ${fmt(TOPUP_MAX)} ₽</div>
+      </div>
+      <button class="checkout-btn" id="topupPayBtn" disabled>Введите сумму</button>
+    `;
+    const input = document.getElementById('topupInput');
+    const hint = document.getElementById('topupHint');
+    const btn = document.getElementById('topupPayBtn');
+    let amount = 0;
+
+    function recalc(){
+      const v = input.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+      if (v !== input.value) input.value = v;
+      const n = v === '' ? NaN : parseInt(v, 10);
+      amount = 0;
+      hint.classList.remove('bad');
+      hint.textContent = `Минимум ${fmt(TOPUP_MIN)} ₽, максимум ${fmt(TOPUP_MAX)} ₽`;
+      btn.disabled = true;
+      btn.textContent = 'Введите сумму';
+      if (isNaN(n) || n <= 0) return;
+      if (n < TOPUP_MIN) { hint.classList.add('bad'); hint.textContent = `Минимальная сумма — ${fmt(TOPUP_MIN)} ₽`; btn.textContent = `Минимум ${fmt(TOPUP_MIN)} ₽`; return; }
+      if (n > TOPUP_MAX) { hint.classList.add('bad'); hint.textContent = `Максимум ${fmt(TOPUP_MAX)} ₽ за раз`; btn.textContent = 'Слишком большая сумма'; return; }
+      amount = n;
+      btn.disabled = false;
+      btn.textContent = `Пополнить на ${fmt(n)} ₽`;
+    }
+    input.addEventListener('input', recalc);
+    document.getElementById('topupChips').addEventListener('click', (e) => {
+      const chip = e.target.closest('.calc-chip');
+      if (!chip) return;
+      input.value = chip.dataset.v;
+      recalc();
+    });
+    btn.addEventListener('click', () => payTopup(amount, btn));
+
+    detailOverlay.classList.add('open');
+    detailSheet.classList.add('open');
+  }
+
+  async function payTopup(amount, btn){
+    if (!amount) return;
+    if (!tg || !tg.initData) {
+      showToast('Открой мини-апп внутри Telegram, чтобы пополнить баланс');
       return;
     }
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Создаём платёж…';
     try {
-      const res = await fetch('/api/create-invoice', {
+      const res = await fetch('/api/create-topup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ initData: tg.initData }),
+        body: JSON.stringify({ initData: tg.initData, amount }),
       });
       const data = await res.json();
       if (!data.ok) {
-        showToast('Не удалось создать счёт: ' + (data.error || 'ошибка'));
+        if (data.error === 'invalid_amount') showToast(`Сумма от ${fmt(data.min)} до ${fmt(data.max)} ₽`);
+        else if (data.error === 'platega_not_configured') showToast('Оплата картой пока не подключена');
+        else showToast('Не удалось создать платёж, попробуйте позже');
+        btn.disabled = false; btn.textContent = label;
         return;
       }
-      tg.openInvoice(data.invoiceLink, (status) => {
-        if (status === 'paid') {
-          showToast('✅ Оплата прошла!');
-          // Вебхук на сервере обрабатывается параллельно и может занять
-          // долю секунды — обновляем статистику с небольшой задержкой,
-          // чтобы запись о заказе точно успела попасть в аккаунт.
-          authWithServer();
-          setTimeout(authWithServer, 1500);
-        }
-        else if (status === 'cancelled') showToast('Оплата отменена');
-        else if (status === 'failed') showToast('Оплата не прошла');
-      });
+      awaitingPayment = { balanceBefore: (verifiedUser && verifiedUser.balance) || 0 };
+      try { tg.openLink(data.url); } catch(e){ window.open(data.url, '_blank'); }
+      showToast('Оплатите на открывшейся странице — баланс обновится сам');
+      btn.disabled = false; btn.textContent = label;
     } catch (e) {
-      showToast('Ошибка сети при создании счёта');
+      showToast('Ошибка сети, попробуйте ещё раз');
+      btn.disabled = false; btn.textContent = label;
     }
-  });
+  }
+
+  document.getElementById('topupBtn').addEventListener('click', openTopup);
 
   cartBody.addEventListener('click', (e) => {
     const qtyBtn = e.target.closest('.qty-control button');
