@@ -523,6 +523,12 @@
     font-size:14.5px; font-weight:800;
   }
   .checkout-btn:disabled{ opacity:.5; }
+  .checkout-btn.secondary{
+    background: var(--bg-raise-2); color: var(--text);
+    border: 1px solid var(--border); margin-top:8px; font-weight:700;
+  }
+  .pay-note{ font-size:11px; color: var(--text-faint); text-align:center; margin-top:10px; line-height:1.4; }
+  .pay-note a{ color: var(--text-dim); }
 
   /* ---------- Product detail sheet ---------- */
   .detail-body{ padding: 4px 18px 20px; }
@@ -788,14 +794,14 @@
   let verifiedUser = null;
 
   async function authWithServer(){
-    if (!tg || !tg.initData) return;
+    if (!tg || !tg.initData) return null;
     try {
       const res = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ initData: tg.initData }),
       });
-      if (!res.ok) return;
+      if (!res.ok) return null;
       const data = await res.json();
       if (data && data.ok && data.user) {
         verifiedUser = data.user;
@@ -810,10 +816,12 @@
         if (typeof data.user.totalSpentStars === 'number') {
           document.getElementById('statSpent').textContent = fmt(data.user.totalSpentStars);
         }
+        return data.user;
       }
     } catch (e) {
       // бэкенд недоступен (например, статичный демо-хостинг без сервера рядом) — остаёмся в демо-режиме
     }
+    return null;
   }
 
   async function fetchStock(){
@@ -1038,7 +1046,7 @@
       wrap.innerHTML = realOrders.map(o => {
         const dateStr = new Date(o.date).toLocaleDateString('ru-RU', { day:'2-digit', month:'short', year:'numeric' });
         const currencySign = o.currency === 'XTR' ? '⭐' : '₽';
-        const st = o.currency === 'XTR' ? statusMeta.done : { label:'Оформлен', cls:'active' };
+        const st = (o.currency === 'XTR' || o.status === 'paid') ? statusMeta.done : { label:'Оформлен', cls:'active' };
         return `
         <div class="order-row">
           <div class="order-icon">🧾</div>
@@ -1200,10 +1208,88 @@
     const total = cartTotal();
     cartFooter.innerHTML = `
       <div class="total-row main"><span>Итого</span><span>${fmt(total)} ₽</span></div>
-      <button class="checkout-btn" id="checkoutBtn">Оплатить звёздами</button>
+      <button class="checkout-btn" id="cardBtn">Оплатить картой / СБП · ${fmt(total)} ₽</button>
+      <button class="checkout-btn secondary" id="starsBtn">Оплатить звёздами Telegram</button>
+      <div class="pay-note">Оплачивая, вы принимаете <a href="/terms.html" target="_blank" rel="noopener">соглашение</a>. Товар придёт в чат с ботом.</div>
     `;
-    document.getElementById('checkoutBtn').addEventListener('click', checkout);
+    document.getElementById('cardBtn').addEventListener('click', payWithCard);
+    document.getElementById('starsBtn').addEventListener('click', checkout);
   }
+
+  // Оплата картой / СБП через Platega: открываем страницу оплаты, а товар
+  // приходит в чат после callback от платёжной системы.
+  let awaitingPayment = null; // { ordersBefore }
+
+  async function payWithCard(){
+    if (cartCount() === 0) return;
+    if (!tg || !tg.initData) {
+      showToast('Открой мини-апп внутри Telegram, чтобы оплатить');
+      return;
+    }
+
+    const items = Object.entries(cart).map(([id, qty]) => ({ id, qty }));
+    const btn = document.getElementById('cardBtn');
+    const label = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Создаём платёж…'; }
+    const restore = () => { if (btn) { btn.disabled = false; btn.textContent = label; } };
+
+    try {
+      const res = await fetch('/api/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: tg.initData, items }),
+      });
+      const data = await res.json();
+
+      if (!data.ok) {
+        if (data.error === 'out_of_stock' && Array.isArray(data.items)) {
+          showToast('Нет в наличии: ' + data.items.map(i => `${i.name} (осталось ${i.available})`).join(', '));
+          fetchStock();
+        } else if (data.error === 'platega_not_configured') {
+          showToast('Оплата картой пока не подключена');
+        } else {
+          showToast('Не удалось создать платёж, попробуйте позже');
+        }
+        restore();
+        return;
+      }
+
+      awaitingPayment = { ordersBefore: (verifiedUser && verifiedUser.ordersCount) || 0 };
+      try { tg.openLink(data.url); } catch(e){ window.open(data.url, '_blank'); }
+      showToast('Оплатите на открывшейся странице — товар придёт в чат');
+      restore();
+    } catch (e) {
+      showToast('Ошибка сети, попробуйте ещё раз');
+      restore();
+    }
+  }
+
+  // После возвращения из платёжной страницы проверяем, прошла ли оплата
+  // (callback может прийти с задержкой — опрашиваем несколько раз).
+  let pollingPayment = false;
+  async function waitForPayment(){
+    if (!awaitingPayment || pollingPayment) return;
+    pollingPayment = true;
+    for (let i = 0; i < 10 && awaitingPayment; i++) {
+      const user = await authWithServer();
+      if (user && (user.ordersCount || 0) > awaitingPayment.ordersBefore) {
+        awaitingPayment = null;
+        cart = {};
+        onCartChange();
+        closeCart();
+        fetchStock();
+        showToast('✅ Оплата прошла! Товар в чате с ботом');
+        if (currentPage === 'orders') { renderActiveSubs(); renderOrderHistory(); }
+        break;
+      }
+      await new Promise(r => setTimeout(r, 3000));
+    }
+    pollingPayment = false;
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') waitForPayment();
+  });
 
   async function checkout(){
     if (cartCount() === 0) return;
@@ -1214,7 +1300,7 @@
     }
 
     const items = Object.entries(cart).map(([id, qty]) => ({ id, qty }));
-    const checkoutBtn = document.getElementById('checkoutBtn');
+    const checkoutBtn = document.getElementById('starsBtn');
     if (checkoutBtn) { checkoutBtn.disabled = true; checkoutBtn.textContent = 'Создаём счёт…'; }
 
     try {
@@ -1233,7 +1319,7 @@
         } else {
           showToast('Не удалось создать счёт: ' + (data.error || 'ошибка'));
         }
-        if (checkoutBtn) { checkoutBtn.disabled = false; checkoutBtn.textContent = 'Оплатить звёздами'; }
+        if (checkoutBtn) { checkoutBtn.disabled = false; checkoutBtn.textContent = 'Оплатить звёздами Telegram'; }
         return;
       }
 
@@ -1247,14 +1333,14 @@
           fetchStock();
           if (currentPage === 'orders') { renderActiveSubs(); renderOrderHistory(); }
         } else {
-          if (checkoutBtn) { checkoutBtn.disabled = false; checkoutBtn.textContent = 'Оплатить звёздами'; }
+          if (checkoutBtn) { checkoutBtn.disabled = false; checkoutBtn.textContent = 'Оплатить звёздами Telegram'; }
           if (status === 'cancelled') showToast('Оплата отменена');
           else if (status === 'failed') showToast('Оплата не прошла');
         }
       });
     } catch (e) {
       showToast('Ошибка сети при создании счёта');
-      if (checkoutBtn) { checkoutBtn.disabled = false; checkoutBtn.textContent = 'Оплатить звёздами'; }
+      if (checkoutBtn) { checkoutBtn.disabled = false; checkoutBtn.textContent = 'Оплатить звёздами Telegram'; }
     }
   }
 
