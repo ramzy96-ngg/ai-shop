@@ -624,12 +624,7 @@
       <span class="search-clear hidden" id="searchClear">✕</span>
     </div>
 
-    <div class="tabs" id="tabs">
-      <div class="tab active" data-tab="all">Всё</div>
-      <div class="tab" data-tab="ai">ИИ</div>
-      <div class="tab" data-tab="games">Игры</div>
-      <div class="tab" data-tab="media">Музыка и видео</div>
-    </div>
+    <div class="tabs" id="tabs"></div>
 
     <div class="promo">
       <div class="promo-eyebrow">Предложение недели</div>
@@ -637,26 +632,7 @@
       <div class="promo-sub">Промокод AISTART при оформлении заказа</div>
     </div>
 
-    <div class="section" data-section="ai">
-      <div class="section-head">
-        <div class="section-title">ИИ-сервисы</div>
-      </div>
-      <div class="grid" id="aiGrid"></div>
-    </div>
-
-    <div class="section" data-section="games">
-      <div class="section-head">
-        <div class="section-title">Игры</div>
-      </div>
-      <div class="grid" id="gamesGrid"></div>
-    </div>
-
-    <div class="section" data-section="media">
-      <div class="section-head">
-        <div class="section-title">Музыка и видео</div>
-      </div>
-      <div class="grid" id="mediaGrid"></div>
-    </div>
+    <div id="catalog"></div>
 
     <div class="search-empty hidden" id="searchEmpty">Ничего не найдено. Попробуйте другой запрос.</div>
 
@@ -1083,8 +1059,6 @@
     }
   ];
 
-  const SECTION_KEYS = ['ai', 'games', 'media'];
-
   function planName(g, pl){
     if (pl.name) return pl.name;
     return g.name + (pl.tier ? ' · ' + pl.tier : '') + ' · ' + pl.len;
@@ -1140,11 +1114,15 @@
   const fmtUsd = n => n.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
   // ---------------- RENDER: SHOP ----------------
-  const grids = {
-    ai: document.getElementById('aiGrid'),
-    games: document.getElementById('gamesGrid'),
-    media: document.getElementById('mediaGrid'),
-  };
+  const catalogEl = document.getElementById('catalog');
+  const SECTION_KEYS = PRODUCTS.map(g => g.id);
+  const TAB_LABELS = { chatgpt:'ChatGPT', claude:'Claude', gemini:'Gemini', xbox:'Xbox', steam:'Steam', spotify:'Spotify', capcut:'CapCut' };
+
+  function renderTabs(){
+    document.getElementById('tabs').innerHTML =
+      `<div class="tab ${currentTab === 'all' ? 'active' : ''}" data-tab="all">Всё</div>` +
+      PRODUCTS.map(g => `<div class="tab ${currentTab === g.id ? 'active' : ''}" data-tab="${g.id}">${TAB_LABELS[g.id] || g.name}</div>`).join('');
+  }
 
   const isOut = id => stockCounts[id] === 0;
 
@@ -1156,73 +1134,69 @@
     return '';
   }
 
-  function groupQty(g){
-    if (g.custom) return cart[STEAM_ID] || 0;
-    return g.plans.reduce((sum, p) => sum + (cart[p.id] || 0), 0);
-  }
-
-  function renderCard(g){
-    const qty = groupQty(g);
-    const single = !g.custom && g.plans.length === 1;
-    const outOfStock = !g.custom && g.plans.every(p => isOut(p.id));
-
-    let priceHtml;
-    if (g.custom) {
-      priceHtml = `<div class="price">${STEAM_RATE} ₽<span class="unit"> за 1 $</span></div>`;
-    } else {
-      const min = Math.min(...g.plans.map(p => p.price));
-      priceHtml = `<div class="price">${g.plans.length > 1 ? 'от ' : ''}${fmt(min)} ₽</div>`;
-    }
-
-    let action;
-    if (outOfStock) {
-      action = `<button class="add-btn" disabled style="opacity:.35">+</button>`;
-    } else if (single && qty > 0) {
-      action = `<div class="qty-control" data-id="${g.plans[0].id}"><button data-act="dec">−</button><span>${qty}</span><button data-act="inc">+</button></div>`;
-    } else if (single) {
-      action = `<button class="add-btn" data-add="${g.plans[0].id}">+</button>`;
-    } else {
-      // несколько вариантов (срок / тариф / сумма) — сначала выбираем в карточке товара
-      action = `<button class="add-btn" data-open="${g.id}">${qty > 0 ? qty : '+'}</button>`;
-    }
-
+  // Каждый тариф / срок — отдельная карточка со своей ценой и иконкой
+  function renderPlanCard(g, pl){
+    const qty = cart[pl.id] || 0;
+    const out = isOut(pl.id);
+    const action = out
+      ? `<button class="add-btn" disabled style="opacity:.35">+</button>`
+      : qty > 0
+        ? `<div class="qty-control" data-id="${pl.id}"><button data-act="dec">−</button><span>${qty}</span><button data-act="inc">+</button></div>`
+        : `<button class="add-btn" data-add="${pl.id}">+</button>`;
     return `
-    <div class="card" data-id="${g.id}">
-      ${g.badge ? `<div class="card-badge">${g.badge}</div>` : ''}
+    <div class="card" data-sku="${pl.id}">
       <div class="card-icon">${iconMarkup(g.icon)}</div>
-      <div class="card-name">${g.name}</div>
-      <div class="card-desc">${g.desc}</div>
-      ${single ? stockBadge(g.plans[0].id) : ''}
+      <div class="card-name">${planName(g, pl)}</div>
+      ${stockBadge(pl.id)}
       <div class="card-bottom">
-        <div class="price-block">${priceHtml}</div>
+        <div class="price-block"><div class="price">${fmt(pl.price)} ₽</div></div>
         ${action}
       </div>
     </div>`;
   }
 
-  function matchesQuery(g, q){
+  // Steam — одна карточка, внутри умный калькулятор
+  function renderSteamCard(g){
+    const inCart = cart[STEAM_ID] ? unitPrice(STEAM_ID) : 0;
+    return `
+    <div class="card" data-id="${g.id}">
+      <div class="card-icon">${iconMarkup(g.icon)}</div>
+      <div class="card-name">${g.name}</div>
+      <div class="card-desc">${g.desc}</div>
+      <div class="card-bottom">
+        <div class="price-block"><div class="price">${STEAM_RATE} ₽<span class="unit"> за 1 $</span></div></div>
+        <button class="add-btn" data-open="${g.id}">${inCart ? '✓' : '+'}</button>
+      </div>
+    </div>`;
+  }
+
+  function matchesQuery(g, pl, q){
     if (!q) return true;
-    const hay = (g.name + ' ' + g.desc + ' ' + (g.keywords || '')).toLowerCase();
+    const hay = (g.name + ' ' + (g.keywords || '') + ' ' + (pl ? planName(g, pl) : g.desc)).toLowerCase();
     return hay.includes(q);
   }
 
   function renderShop(){
     const q = searchQuery.trim().toLowerCase();
-    const has = {};
-    SECTION_KEYS.forEach(key => {
-      const list = PRODUCTS.filter(g => g.cat === key && matchesQuery(g, q));
-      grids[key].innerHTML = list.map(renderCard).join('');
-      has[key] = list.length > 0;
-    });
-
     let anyVisible = false;
-    document.querySelectorAll('[data-section]').forEach(sec => {
-      const key = sec.dataset.section;
-      const show = (currentTab === 'all' || key === currentTab) && has[key];
-      if (show) anyVisible = true;
-      sec.classList.toggle('hidden', !show);
+    let html = '';
+    PRODUCTS.forEach(g => {
+      if (currentTab !== 'all' && currentTab !== g.id) return;
+      let cards;
+      if (g.custom === 'steam') {
+        cards = matchesQuery(g, null, q) ? renderSteamCard(g) : '';
+      } else {
+        cards = g.plans.filter(pl => matchesQuery(g, pl, q)).map(pl => renderPlanCard(g, pl)).join('');
+      }
+      if (!cards) return;
+      anyVisible = true;
+      html += `
+      <div class="section" data-section="${g.id}">
+        <div class="section-head"><div class="section-title">${g.name}</div></div>
+        <div class="grid">${cards}</div>
+      </div>`;
     });
-
+    catalogEl.innerHTML = html;
     document.getElementById('searchEmpty').classList.toggle('hidden', anyVisible);
     document.querySelector('.promo').classList.toggle('hidden', !!q);
   }
@@ -1986,6 +1960,7 @@
   });
 
   // ---------------- INIT ----------------
+  renderTabs();
   renderShop();
   updateCartBadge();
   updateMainButton();
