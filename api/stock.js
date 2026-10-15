@@ -6,6 +6,6 @@ const { CATALOG } = require('../lib/catalog');
 const { getStockCounts } = require('../lib/stock');
 
 module.exports = async (req, res) => {
-  const counts = await getStockCounts(Object.keys(CATALOG));
+  const counts = await getStockCounts(Object.keys(CATALOG).filter((id) => !CATALOG[id].custom));
   res.status(200).json({ ok: true, stock: counts });
 };

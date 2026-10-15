@@ -92,7 +92,7 @@ async function handlePublicCommand(cmd, chatId, origin) {
     return true;
   }
   if (cmd === '/prices') {
-    const lines = Object.values(CATALOG).map((p) => `• ${p.name} — ${formatRub(p.price)}`);
+    const lines = Object.values(CATALOG).map((p) => `• ${p.name} — ${p.custom ? `1 $ = ${p.rate} ₽` : formatRub(p.price)}`);
     await callTelegram('sendMessage', {
       chat_id: chatId,
       text: '💰 Актуальные цены AI Shop:\n\n' + lines.join('\n') + '\n\nПодробнее — в магазине и в пользовательском соглашении.',
@@ -145,7 +145,7 @@ async function handleAdminCommand(chatId, text) {
   }
 
   if (text.startsWith('/stock')) {
-    const ids = Object.keys(CATALOG);
+    const ids = Object.keys(CATALOG).filter((id) => !CATALOG[id].custom);
     const counts = await getStockCounts(ids);
     const lines = ids.map((id) => `${CATALOG[id].name}: ${counts[id] || 0}`);
     await callTelegram('sendMessage', { chat_id: chatId, text: '📦 Остатки:\n' + lines.join('\n') });

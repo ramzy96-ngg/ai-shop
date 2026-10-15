@@ -43,6 +43,19 @@ module.exports = async (req, res) => {
   for (const it of items) {
     const entry = CATALOG[it && it.id];
     if (!entry) continue;
+    if (entry.custom) {
+      // Позиция с произвольной суммой (пополнение Steam): сумма в рублях от клиента,
+      // сервер проверяет границы. Это источник истины — зачислим ровно оплаченное.
+      const rub = Math.ceil(Number(it.rub));
+      if (!Number.isFinite(rub) || rub < entry.min || rub > entry.max) {
+        res.status(400).json({ ok: false, error: 'invalid_amount', min: entry.min, max: entry.max });
+        return;
+      }
+      totalRub += rub;
+      payloadItems.push([it.id, 1, rub]);
+      lines.push(`${entry.name} ${Math.round((rub / entry.rate) * 100) / 100} $ (${rub} ₽)`);
+      continue;
+    }
     const qty = Math.max(1, Math.min(99, Number(it.qty) || 1));
     totalRub += entry.price * qty;
     payloadItems.push([it.id, qty]);
@@ -55,8 +68,9 @@ module.exports = async (req, res) => {
   }
 
   // Проверяем остатки до выставления счёта.
-  const counts = await getStockCounts(payloadItems.map(([id]) => id));
-  const outOfStock = payloadItems.filter(([id, qty]) => (counts[id] || 0) < qty);
+  const stocked = payloadItems.filter(([id]) => !CATALOG[id].custom);
+  const counts = await getStockCounts(stocked.map(([id]) => id));
+  const outOfStock = stocked.filter(([id, qty]) => (counts[id] || 0) < qty);
   if (outOfStock.length > 0) {
     res.status(409).json({
       ok: false,

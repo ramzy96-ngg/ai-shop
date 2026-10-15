@@ -93,6 +93,7 @@ module.exports = async (req, res) => {
       claimed = [];
       outer:
       for (const [itemId, qty] of rec.items) {
+        if (CATALOG[itemId] && CATALOG[itemId].custom) continue; // ручная выдача, склада нет
         for (let k = 0; k < qty; k++) {
           const code = await claimStockItem(itemId);
           if (!code) { shortageItem = itemId; break outer; }
@@ -122,7 +123,14 @@ module.exports = async (req, res) => {
       await kv.set(`paycodes:${id}`, claimed, { ex: 30 * DAY });
     }
 
-    const codesText = claimed.map((c) => `• ${(CATALOG[c.id] && CATALOG[c.id].name) || c.id}: ${c.code}`).join('\n');
+    // Позиции с произвольной суммой (Steam) выдаём вручную: покупатель пишет логин в поддержку.
+    const manual = rec.items.filter(([itemId]) => CATALOG[itemId] && CATALOG[itemId].custom);
+    const manualLines = manual.map(([itemId, , rub]) => {
+      const e = CATALOG[itemId];
+      return `• ${e.name} на ${rub} ₽ (≈ ${Math.round((rub / e.rate) * 100) / 100} $): напишите логин Steam в поддержку @ramzy988 — пополним вручную`;
+    });
+    const codesText = claimed.map((c) => `• ${(CATALOG[c.id] && CATALOG[c.id].name) || c.id}: ${c.code}`)
+      .concat(manualLines).join('\n');
     const sent = await callTelegram('sendMessage', {
       chat_id: rec.userId,
       text: `✅ Оплата прошла! Списано ${rec.amount} ₽.\n\nВаш заказ:\n${codesText}`,
@@ -147,10 +155,12 @@ module.exports = async (req, res) => {
 
     const left = [];
     for (const [itemId] of rec.items) {
+      if (CATALOG[itemId] && CATALOG[itemId].custom) continue;
       left.push(`${(CATALOG[itemId] && CATALOG[itemId].name) || itemId}: ${await getStockCount(itemId)}`);
     }
     await notifyAdmin(
-      `💰 Новая продажа (карта/СБП)\n${rec.title}\nСумма: ${rec.amount} ₽\nПокупатель: ${rec.userId}${rec.username ? ' @' + rec.username : ''}\nОстаток: ${left.join(', ')}`
+      `💰 Новая продажа (карта/СБП)\n${rec.title}\nСумма: ${rec.amount} ₽\nПокупатель: ${rec.userId}${rec.username ? ' @' + rec.username : ''}\nОстаток: ${left.join(', ') || '—'}` +
+      (manual.length ? `\n\n🎮 Нужно вручную пополнить Steam: ${manual.map(([, , rub]) => rub + ' ₽').join(', ')}. Покупатель напишет логин в поддержку.` : '')
     );
 
     res.status(200).json({ ok: true });

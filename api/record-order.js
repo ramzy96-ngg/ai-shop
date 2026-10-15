@@ -42,7 +42,7 @@ module.exports = async (req, res) => {
   const lines = [];
   for (const it of items) {
     const entry = CATALOG[it && it.id];
-    if (!entry) continue;
+    if (!entry || entry.custom) continue;
     const qty = Math.max(1, Math.min(99, Number(it.qty) || 1));
     total += entry.price * qty;
     lines.push(`${entry.name} × ${qty}`);

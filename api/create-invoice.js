@@ -46,6 +46,10 @@ module.exports = async (req, res) => {
   for (const it of items) {
     const entry = CATALOG[it && it.id];
     if (!entry) continue;
+    if (entry.custom) {
+      res.status(400).json({ ok: false, error: 'stars_not_supported_for_custom' });
+      return;
+    }
     const qty = Math.max(1, Math.min(99, Number(it.qty) || 1));
     totalRub += entry.price * qty;
     lines.push(`${entry.name} × ${qty}`);
