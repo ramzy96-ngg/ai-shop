@@ -11,7 +11,7 @@
 // Platega может повторить callback (до 3 раз), поэтому всё идемпотентно:
 // блокировка на время обработки + сохранённые коды, чтобы не выдать дважды.
 
-const { recordOrder } = require('../lib/telegramAuth');
+const { recordOrder, creditBalance } = require('../lib/telegramAuth');
 const { CATALOG } = require('../lib/catalog');
 const { claimStockItem, addStock, getStockCount } = require('../lib/stock');
 const { kv } = require('../lib/db');
@@ -82,6 +82,33 @@ module.exports = async (req, res) => {
       );
       await kv.del(`paylock:${id}`);
       res.status(200).json({ ok: true, ignored: 'verification_failed' });
+      return;
+    }
+
+    // Пополнение баланса: зачисляем ровно оплаченную сумму, один раз.
+    if (rec.type === 'topup') {
+      const first = await kv.set(`paycredit:${id}`, 1, { nx: true, ex: 30 * DAY });
+      let user = null;
+      if (first) {
+        try {
+          user = await creditBalance(rec.userId, Number(rec.amount), 'Пополнение баланса');
+        } catch (err) {
+          await kv.del(`paycredit:${id}`); // не зачислили — пусть Platega повторит
+          throw err;
+        }
+      }
+      rec.status = 'delivered';
+      await kv.set(payKey, rec, { ex: 30 * DAY });
+      await kv.set(`paydone:${id}`, 1, { ex: 30 * DAY });
+      await kv.del(`paylock:${id}`);
+      if (first) {
+        await callTelegram('sendMessage', {
+          chat_id: rec.userId,
+          text: `✅ Баланс пополнен на ${rec.amount} ₽. Сейчас на счёте: ${user.balance} ₽`,
+        });
+        await notifyAdmin(`💳 Пополнение баланса\nСумма: ${rec.amount} ₽\nПокупатель: ${rec.userId}${rec.username ? ' @' + rec.username : ''}`);
+      }
+      res.status(200).json({ ok: true });
       return;
     }
 
