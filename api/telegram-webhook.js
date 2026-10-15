@@ -144,6 +144,27 @@ async function handleAdminCommand(chatId, text) {
     return true;
   }
 
+  // /seedstock [N] — довести остаток КАЖДОГО товара до N штук (по умолчанию 5) кодами-заглушками.
+  // Безопасно запускать повторно: добавляет только недостающее до N.
+  if (text.startsWith('/seedstock')) {
+    const n = Math.max(1, Math.min(100, parseInt(text.split(/\s+/)[1], 10) || 5));
+    const ids = Object.keys(CATALOG).filter((id) => !CATALOG[id].custom);
+    const counts = await getStockCounts(ids);
+    let added = 0;
+    for (const id of ids) {
+      const need = n - (counts[id] || 0);
+      if (need <= 0) continue;
+      const codes = Array.from({ length: need }, (_, i) => `ЗАГЛУШКА-${id}-${Date.now().toString(36)}${i + 1}`);
+      await addStock(id, codes);
+      added += need;
+    }
+    await callTelegram('sendMessage', {
+      chat_id: chatId,
+      text: `✅ Заглушки добавлены: ${added} шт. Теперь у каждого товара остаток не меньше ${n}. Проверка: /stock`,
+    });
+    return true;
+  }
+
   if (text.startsWith('/stock')) {
     const ids = Object.keys(CATALOG).filter((id) => !CATALOG[id].custom);
     const counts = await getStockCounts(ids);
@@ -172,7 +193,7 @@ module.exports = async (req, res) => {
     // Команда без хвоста "@botname" и без аргументов: "/terms@Bot arg" -> "/terms"
     const cmd = text.startsWith('/') ? text.split(/[\s@]/)[0].toLowerCase() : '';
 
-    if (cmd === '/addstock' || cmd === '/stock') {
+    if (cmd === '/addstock' || cmd === '/stock' || cmd === '/seedstock') {
       // Админ-команды: не-админам молча не отвечаем.
       if (isAdmin) await handleAdminCommand(msg.chat.id, text);
     } else if (cmd === '/start') {
