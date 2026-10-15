@@ -544,7 +544,10 @@
   .feature-list{ display:flex; flex-direction:column; gap:9px; margin-bottom:17px; }
   .feature-item{ display:flex; align-items:center; gap:9px; font-size:12.5px; color: var(--text); }
   .feature-item .check{ color: var(--accent); font-weight:800; }
-  .plan-options{ display:flex; gap:8px; margin-bottom:17px; }
+  .plan-options{ display:grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap:8px; margin-bottom:17px; }
+  .plan-tier{ grid-column:1 / -1; font-size:11px; font-weight:800; color: var(--text-faint); text-transform:uppercase; letter-spacing:.06em; margin-top:4px; }
+  .plan-tier:first-child{ margin-top:0; }
+  .plan-opt.out{ opacity:.4; cursor:not-allowed; }
   .plan-opt{
     flex:1; text-align:center; padding:11px 6px; border-radius: var(--radius-sm);
     border:1.5px solid var(--border);
@@ -554,6 +557,27 @@
   .plan-opt .p-price{ color: var(--text-faint); font-size:11px; font-variant-numeric: tabular-nums; }
   .plan-opt.selected{ border-color: var(--accent); background: var(--accent-dim); }
   .plan-opt.selected .p-len{ color: var(--accent); }
+
+  /* ---------- Steam calculator ---------- */
+  .calc{ display:flex; flex-direction:column; gap:12px; margin-bottom:17px; }
+  .calc-mode{ display:flex; background: var(--bg-input); border:1px solid var(--border-soft); border-radius: var(--radius-sm); padding:3px; }
+  .calc-mode-opt{ flex:1; text-align:center; padding:8px 4px; font-size:12.5px; font-weight:700; color: var(--text-faint); border-radius:8px; cursor:pointer; }
+  .calc-mode-opt.active{ background: var(--accent-dim); color: var(--accent); }
+  .calc-field{ display:flex; align-items:center; gap:10px; background: var(--bg-input); border:1.5px solid var(--border); border-radius: var(--radius-sm); padding:0 14px; }
+  .calc-field:focus-within{ border-color: var(--accent); }
+  .calc-cur{ font-size:20px; font-weight:800; color: var(--text-faint); }
+  .calc-field input{ flex:1; min-width:0; background:transparent; border:none; outline:none; color: var(--text); font-size:20px; font-weight:800; padding:14px 0; font-family:inherit; font-variant-numeric: tabular-nums; }
+  .calc-field input::placeholder{ color: var(--text-faint); font-weight:500; font-size:15px; }
+  .calc-chips{ display:flex; flex-wrap:wrap; gap:8px; }
+  .calc-chip{ padding:8px 13px; border-radius:20px; border:1px solid var(--border); background: var(--bg-input); font-size:12.5px; font-weight:700; cursor:pointer; }
+  .calc-chip:active{ border-color: var(--accent); }
+  .calc-result{ background: var(--bg-raise-2); border:1px solid var(--border-soft); border-radius: var(--radius-sm); padding:12px 14px; display:flex; flex-direction:column; gap:8px; }
+  .calc-row{ display:flex; justify-content:space-between; align-items:baseline; font-size:12.5px; color: var(--text-dim); }
+  .calc-row b{ color: var(--text); font-size:14px; font-variant-numeric: tabular-nums; }
+  .calc-row.total b{ color: var(--accent); font-size:18px; }
+  .calc-hint{ font-size:11.5px; color: var(--text-faint); line-height:1.4; }
+  .calc-hint.bad{ color: var(--danger); }
+  .checkout-btn:disabled{ opacity:.45; }
 
   /* toast */
   .toast{
@@ -596,16 +620,15 @@
   <div class="page" id="page-shop">
     <div class="searchbar">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-      <input id="searchInput" type="text" placeholder="Поиск подписок, токенов, инструментов…" autocomplete="off">
+      <input id="searchInput" type="text" placeholder="Поиск: ChatGPT, Xbox, Spotify, Steam…" autocomplete="off">
       <span class="search-clear hidden" id="searchClear">✕</span>
     </div>
 
     <div class="tabs" id="tabs">
       <div class="tab active" data-tab="all">Всё</div>
-      <div class="tab" data-tab="subs">Подписки</div>
-      <div class="tab" data-tab="tokens">Токены</div>
-      <div class="tab" data-tab="images">Изображения</div>
-      <div class="tab" data-tab="tools">Инструменты</div>
+      <div class="tab" data-tab="ai">ИИ</div>
+      <div class="tab" data-tab="games">Игры</div>
+      <div class="tab" data-tab="media">Музыка и видео</div>
     </div>
 
     <div class="promo">
@@ -614,27 +637,25 @@
       <div class="promo-sub">Промокод AISTART при оформлении заказа</div>
     </div>
 
-    <div class="section" data-section="subs">
+    <div class="section" data-section="ai">
       <div class="section-head">
-        <div class="section-title">Подписки</div>
-        <div class="section-link">Все →</div>
+        <div class="section-title">ИИ-сервисы</div>
       </div>
-      <div class="grid" id="subsGrid"></div>
+      <div class="grid" id="aiGrid"></div>
     </div>
 
-    <div class="section" data-section="tokens">
+    <div class="section" data-section="games">
       <div class="section-head">
-        <div class="section-title">Пакеты токенов</div>
-        <div class="section-link">Все →</div>
+        <div class="section-title">Игры</div>
       </div>
-      <div class="token-list" id="tokensList"></div>
+      <div class="grid" id="gamesGrid"></div>
     </div>
 
-    <div class="section" data-section="images">
+    <div class="section" data-section="media">
       <div class="section-head">
-        <div class="section-title">Генерация изображений</div>
+        <div class="section-title">Музыка и видео</div>
       </div>
-      <div class="grid" id="imagesGrid"></div>
+      <div class="grid" id="mediaGrid"></div>
     </div>
 
     <div class="search-empty hidden" id="searchEmpty">Ничего не найдено. Попробуйте другой запрос.</div>
@@ -839,48 +860,255 @@
   }
 
   // ---------------- DATA ----------------
+  // Карточка каталога = группа; plans — конкретные позиции со своим id и ценой.
+  // В корзину и на сервер уходит id позиции (те же цены лежат в server/lib/catalog.js).
+  const STEAM_ID = 'steam-topup';
+  const STEAM_RATE = 85;        // ₽ за 1 $
+  const STEAM_MIN_RUB = 50;     // минимальная сумма пополнения, ₽
+  const STEAM_MAX_RUB = 100000; // максимум за один заказ, ₽
+
   const PRODUCTS = [
-    { id:'sub-gpt', cat:'subs', icon:'openai', name:'ChatGPT Plus', desc:'GPT-5, безлимит сообщений, приоритет', price:990, oldPrice:1290, unit:'/мес', badge:'-23%',
-      features:['Модель GPT-5 без ограничений','Генерация изображений','Приоритетный доступ в часы пик','Голосовой режим'],
-      plans:[{len:'1 месяц',price:990},{len:'3 месяца',price:2690},{len:'12 месяцев',price:9990}] },
-    { id:'sub-claude', cat:'subs', icon:'anthropic', name:'Claude Pro', desc:'Claude Opus/Sonnet, большой контекст', price:1090, unit:'/мес',
-      features:['Модели Opus и Sonnet','Контекст до 200k токенов','Claude Code включён','Проекты и артефакты'],
-      plans:[{len:'1 месяц',price:1090},{len:'3 месяца',price:2990},{len:'12 месяцев',price:10900}] },
-    { id:'sub-mj', cat:'images', icon:'🎨', name:'Midjourney Standard', desc:'Безлимит изображений в расслабленном режиме', price:1450, unit:'/мес',
-      features:['Безлимит генераций (relax)','15 часов fast-режима','Коммерческое использование','Доступ к галерее'],
-      plans:[{len:'1 месяц',price:1450},{len:'12 месяцев',price:13900}] },
-    { id:'sub-suno', cat:'subs', icon:'suno', name:'Suno Pro', desc:'Генерация музыки, 500 треков/мес', price:790, unit:'/мес',
-      features:['500 генераций в месяц','Коммерческая лицензия','Без водяных знаков','Приоритетная очередь'],
-      plans:[{len:'1 месяц',price:790},{len:'12 месяцев',price:7900}] },
-    { id:'img-dalle', cat:'images', icon:'openai', name:'DALL·E пакет', desc:'300 генераций изображений', price:650, unit:'',
-      features:['300 изображений HD','Любые пропорции','Коммерческое использование'],
-      plans:[{len:'300 шт.',price:650},{len:'1000 шт.',price:1890}] },
-    { id:'tool-cursor', cat:'tools', icon:'cursor', name:'Cursor Pro', desc:'AI-редактор кода, безлимит автокомплита', price:1590, unit:'/мес',
-      features:['Безлимитный автокомплит','500 быстрых запросов GPT-5/Claude','Работа с большими репозиториями'],
-      plans:[{len:'1 месяц',price:1590},{len:'12 месяцев',price:15900}] },
-    { id:'tool-elevenlabs', cat:'tools', icon:'elevenlabs', name:'ElevenLabs Creator', desc:'Озвучка текста, клонирование голоса', price:990, unit:'/мес',
-      features:['100 000 символов/мес','Клонирование голоса','30 языков'],
-      plans:[{len:'1 месяц',price:990},{len:'12 месяцев',price:9900}] },
+    {
+      "id": "chatgpt",
+      "cat": "ai",
+      "icon": "openai",
+      "name": "ChatGPT",
+      "desc": "Подписки ChatGPT: Go, Plus и Pro разных уровней",
+      "keywords": "чатгпт gpt openai plus go pro",
+      "plans": [
+        {
+          "id": "gpt-go",
+          "len": "Go",
+          "price": 490
+        },
+        {
+          "id": "gpt-plus",
+          "len": "Plus",
+          "price": 1650
+        },
+        {
+          "id": "gpt-pro5",
+          "len": "Pro 5x",
+          "price": 8650
+        },
+        {
+          "id": "gpt-pro20",
+          "len": "Pro 20x",
+          "price": 13500
+        },
+        {
+          "id": "gpt-pro50",
+          "len": "Pro 50x",
+          "price": 41990
+        }
+      ]
+    },
+    {
+      "id": "claude",
+      "cat": "ai",
+      "icon": "anthropic",
+      "name": "Claude Pro",
+      "desc": "Подписка Claude Pro от Anthropic",
+      "keywords": "клод anthropic claude",
+      "plans": [
+        {
+          "id": "claude-pro",
+          "len": "Pro",
+          "price": 1890,
+          "name": "Claude Pro"
+        }
+      ]
+    },
+    {
+      "id": "gemini",
+      "cat": "ai",
+      "icon": "gemini",
+      "name": "Gemini AI Pro",
+      "desc": "Google Gemini AI Pro на 18 месяцев, 2 ТБ в облаке",
+      "keywords": "гемини google gemini",
+      "plans": [
+        {
+          "id": "gemini-pro-18",
+          "len": "18 мес. · 2 ТБ",
+          "price": 119,
+          "name": "Gemini AI Pro · 18 мес. · 2 ТБ"
+        }
+      ]
+    },
+    {
+      "id": "xbox",
+      "cat": "games",
+      "icon": "xbox",
+      "name": "Xbox Game Pass",
+      "desc": "Подписка Xbox на срок от 1 до 12 месяцев",
+      "keywords": "xbox иксбокс game pass",
+      "plans": [
+        {
+          "id": "xbox-1m",
+          "len": "1 мес.",
+          "price": 899
+        },
+        {
+          "id": "xbox-2m",
+          "len": "2 мес.",
+          "price": 1119
+        },
+        {
+          "id": "xbox-3m",
+          "len": "3 мес.",
+          "price": 1999
+        },
+        {
+          "id": "xbox-4m",
+          "len": "4 мес.",
+          "price": 2299
+        },
+        {
+          "id": "xbox-5m",
+          "len": "5 мес.",
+          "price": 2499
+        },
+        {
+          "id": "xbox-6m",
+          "len": "6 мес.",
+          "price": 3399
+        },
+        {
+          "id": "xbox-7m",
+          "len": "7 мес.",
+          "price": 3999
+        },
+        {
+          "id": "xbox-8m",
+          "len": "8 мес.",
+          "price": 4499
+        },
+        {
+          "id": "xbox-9m",
+          "len": "9 мес.",
+          "price": 5199
+        },
+        {
+          "id": "xbox-10m",
+          "len": "10 мес.",
+          "price": 5599
+        },
+        {
+          "id": "xbox-11m",
+          "len": "11 мес.",
+          "price": 6190
+        },
+        {
+          "id": "xbox-12m",
+          "len": "12 мес.",
+          "price": 6590
+        }
+      ]
+    },
+    {
+      "id": "steam",
+      "cat": "games",
+      "icon": "steam",
+      "name": "Пополнение Steam",
+      "desc": "Любая сумма: введите, сколько нужно, и мы сразу посчитаем цену",
+      "keywords": "стим steam пополнение кошелёк",
+      "custom": "steam",
+      "plans": []
+    },
+    {
+      "id": "spotify",
+      "cat": "media",
+      "icon": "spotify",
+      "name": "Spotify Premium",
+      "desc": "Premium Individual, Duo и Family",
+      "keywords": "спотифай spotify музыка",
+      "plans": [
+        {
+          "id": "spotify-ind-1m",
+          "tier": "Individual",
+          "len": "1 мес.",
+          "price": 250
+        },
+        {
+          "id": "spotify-ind-3m",
+          "tier": "Individual",
+          "len": "3 мес.",
+          "price": 599
+        },
+        {
+          "id": "spotify-ind-6m",
+          "tier": "Individual",
+          "len": "6 мес.",
+          "price": 999
+        },
+        {
+          "id": "spotify-ind-12m",
+          "tier": "Individual",
+          "len": "12 мес.",
+          "price": 1849
+        },
+        {
+          "id": "spotify-duo-1m",
+          "tier": "Duo",
+          "len": "1 мес.",
+          "price": 299
+        },
+        {
+          "id": "spotify-family-1m",
+          "tier": "Family",
+          "len": "1 мес.",
+          "price": 399
+        }
+      ]
+    },
+    {
+      "id": "capcut",
+      "cat": "media",
+      "icon": "capcut",
+      "name": "CapCut Pro Team",
+      "desc": "CapCut Pro Team на 1 или 6 месяцев",
+      "keywords": "капкут capcut видео монтаж",
+      "plans": [
+        {
+          "id": "capcut-1m",
+          "len": "1 мес.",
+          "price": 299
+        },
+        {
+          "id": "capcut-6m",
+          "len": "6 мес.",
+          "price": 1119
+        }
+      ]
+    }
   ];
 
-  const TOKENS = [
-    { id:'tok-gpt-100', cat:'tokens', icon:'openai', name:'OpenAI API — 100k токенов', meta:'GPT-5 / GPT-5-mini · не сгорают', price:390 },
-    { id:'tok-gpt-500', cat:'tokens', icon:'openai', name:'OpenAI API — 500k токенов', meta:'GPT-5 / GPT-5-mini · не сгорают', price:1690 },
-    { id:'tok-claude-100', cat:'tokens', icon:'anthropic', name:'Anthropic API — 100k токенов', meta:'Claude Opus/Sonnet · не сгорают', price:450 },
-    { id:'tok-claude-500', cat:'tokens', icon:'anthropic', name:'Anthropic API — 500k токенов', meta:'Claude Opus/Sonnet · не сгорают', price:1990 },
-    { id:'tok-mj-fast', cat:'tokens', icon:'🟣', name:'Midjourney Fast-часы ×10', meta:'Разовая покупка, не требует подписки', price:890 },
-  ];
+  const SECTION_KEYS = ['ai', 'games', 'media'];
 
-  const ALL_ITEMS = [...PRODUCTS, ...TOKENS];
+  function planName(g, pl){
+    if (pl.name) return pl.name;
+    return g.name + (pl.tier ? ' · ' + pl.tier : '') + ' · ' + pl.len;
+  }
 
-  // Официальные векторные логотипы (fill="currentColor" — красятся через CSS color
-  // родителя). Для брендов без готовой иконки (Midjourney) остаётся эмодзи-фолбэк.
+  // Плоский список позиций (то, что лежит в корзине / заказах)
+  const ALL_ITEMS = [];
+  PRODUCTS.forEach(g => {
+    if (g.custom === 'steam') {
+      ALL_ITEMS.push({ id:STEAM_ID, groupId:g.id, cat:g.cat, icon:g.icon, name:g.name, price:0, custom:true });
+      return;
+    }
+    g.plans.forEach(pl => ALL_ITEMS.push({ id:pl.id, groupId:g.id, cat:g.cat, icon:g.icon, name:planName(g, pl), price:pl.price }));
+  });
+
+  // Векторные логотипы (fill="currentColor" — красятся через CSS color родителя).
   const BRAND_ICONS = {
     openai: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg>',
     anthropic: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.3041 3.541h-3.6718l6.696 16.918H24Zm-10.6082 0L0 20.459h3.7442l1.3693-3.5527h7.0052l1.3693 3.5528h3.7442L10.5363 3.5409Zm-.3712 10.2232 2.2914-5.9456 2.2914 5.9456Z"/></svg>',
-    cursor: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.503.131 1.891 5.678a.84.84 0 0 0-.42.726v11.188c0 .3.162.575.42.724l9.609 5.55a1 1 0 0 0 .998 0l9.61-5.55a.84.84 0 0 0 .42-.724V6.404a.84.84 0 0 0-.42-.726L12.497.131a1.01 1.01 0 0 0-.996 0M2.657 6.338h18.55c.263 0 .43.287.297.515L12.23 22.918c-.062.107-.229.064-.229-.06V12.335a.59.59 0 0 0-.295-.51l-9.11-5.257c-.109-.063-.064-.23.061-.23"/></svg>',
-    elevenlabs: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.6035 0v24h4.9317V0zm9.8613 0v24h4.9317V0z"/></svg>',
-    suno: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.5 0C20.642 0 24 5.373 24 12h-9c0 6.627-3.358 12-7.5 12C3.358 24 0 18.627 0 12h9c0-6.627 3.358-12 7.5-12Z"/></svg>',
+    xbox: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.102 21.033A11.95 11.95 0 0 0 12 24a11.96 11.96 0 0 0 7.902-2.967c1.877-1.912-4.316-8.709-7.902-11.417c-3.582 2.708-9.779 9.505-7.898 11.417m11.16-14.406c2.5 2.961 7.484 10.313 6.076 12.912A11.94 11.94 0 0 0 24 12.004a11.95 11.95 0 0 0-3.57-8.536s-.027-.022-.082-.042a.8.8 0 0 0-.281-.045c-.592 0-1.985.434-4.805 3.246M3.654 3.426c-.057.02-.082.041-.086.042A11.96 11.96 0 0 0 0 12.004c0 2.854.998 5.473 2.661 7.533c-1.401-2.605 3.579-9.951 6.08-12.91c-2.82-2.813-4.216-3.245-4.806-3.245a.7.7 0 0 0-.281.046zM12 3.551S9.055 1.828 6.755 1.746c-.903-.033-1.454.295-1.521.339C7.379.646 9.659 0 11.984 0H12c2.334 0 4.605.646 6.766 2.085c-.068-.046-.615-.372-1.52-.339C14.946 1.828 12 3.545 12 3.545z"/></svg>',
+    spotify: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12s12-5.4 12-12S18.66 0 12 0m5.521 17.34c-.24.359-.66.48-1.021.24c-2.82-1.74-6.36-2.101-10.561-1.141c-.418.122-.779-.179-.899-.539c-.12-.421.18-.78.54-.9c4.56-1.021 8.52-.6 11.64 1.32c.42.18.479.659.301 1.02m1.44-3.3c-.301.42-.841.6-1.262.3c-3.239-1.98-8.159-2.58-11.939-1.38c-.479.12-1.02-.12-1.14-.6s.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2m.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721c-.18-.601.18-1.2.72-1.381c4.26-1.26 11.28-1.02 15.721 1.621c.539.3.719 1.02.419 1.56c-.299.421-1.02.599-1.559.3"/></svg>',
+    gemini: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68q.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58a12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68q-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96q2.19.93 3.81 2.55t2.55 3.81"/></svg>',
+    steam: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658a3.4 3.4 0 0 1 1.912-.59q.094.001.188.006l2.861-4.142V8.91a4.53 4.53 0 0 1 4.524-4.524c2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911l.004.159a3.39 3.39 0 0 1-3.39 3.396a3.41 3.41 0 0 1-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0M7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25a2.551 2.551 0 0 0 3.337-3.324a2.547 2.547 0 0 0-3.255-1.413l1.523.63a1.878 1.878 0 0 1-1.445 3.467zm11.415-9.303a3.02 3.02 0 0 0-3.015-3.015a3.015 3.015 0 1 0 3.015 3.015m-5.273-.005a2.264 2.264 0 1 1 4.531 0a2.267 2.267 0 0 1-2.266 2.265a2.264 2.264 0 0 1-2.265-2.265"/></svg>',
+    capcut: '<svg viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm5.2 4.2v7.6l6.3-3.8z"/></svg>',
   };
 
   function iconMarkup(icon){
@@ -888,15 +1116,15 @@
   }
 
   const ACTIVE_SUBS = [
-    { id:'sub-gpt', started:'28 авг', daysLeft:25, totalDays:30 },
-    { id:'tool-cursor', started:'15 авг', daysLeft:8, totalDays:30 },
+    { id:'gpt-plus', started:'28 авг', daysLeft:25, totalDays:30 },
+    { id:'spotify-ind-1m', started:'15 авг', daysLeft:8, totalDays:30 },
   ];
 
   const ORDER_HISTORY = [
-    { id:'tok-gpt-100', date:'20 авг 2026', price:390, status:'done' },
-    { id:'sub-mj', date:'3 июл 2026', price:1450, status:'expired' },
-    { id:'tok-claude-500', date:'28 июн 2026', price:1990, status:'done' },
-    { id:'sub-suno', date:'12 май 2026', price:790, status:'expired' },
+    { id:'gpt-go', date:'20 авг 2026', price:490, status:'done' },
+    { id:'xbox-3m', date:'3 июл 2026', price:1999, status:'expired' },
+    { id:'claude-pro', date:'28 июн 2026', price:1890, status:'done' },
+    { id:'capcut-1m', date:'12 май 2026', price:299, status:'expired' },
   ];
 
   // ---------------- STATE ----------------
@@ -906,13 +1134,19 @@
   let selectedPlanIdx = 0;
   let searchQuery = '';
   let stockCounts = {}; // id -> остаток, подтягивается с /api/stock
+  let customLines = {}; // id -> { rub } для позиций с произвольной суммой (Steam)
 
   const fmt = n => n.toLocaleString('ru-RU');
+  const fmtUsd = n => n.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
   // ---------------- RENDER: SHOP ----------------
-  const subsGrid = document.getElementById('subsGrid');
-  const tokensList = document.getElementById('tokensList');
-  const imagesGrid = document.getElementById('imagesGrid');
+  const grids = {
+    ai: document.getElementById('aiGrid'),
+    games: document.getElementById('gamesGrid'),
+    media: document.getElementById('mediaGrid'),
+  };
+
+  const isOut = id => stockCounts[id] === 0;
 
   function stockBadge(id){
     const n = stockCounts[id];
@@ -922,79 +1156,69 @@
     return '';
   }
 
-  function renderCard(p){
-    const qty = cart[p.id] || 0;
-    const outOfStock = stockCounts[p.id] === 0;
+  function groupQty(g){
+    if (g.custom) return cart[STEAM_ID] || 0;
+    return g.plans.reduce((sum, p) => sum + (cart[p.id] || 0), 0);
+  }
+
+  function renderCard(g){
+    const qty = groupQty(g);
+    const single = !g.custom && g.plans.length === 1;
+    const outOfStock = !g.custom && g.plans.every(p => isOut(p.id));
+
+    let priceHtml;
+    if (g.custom) {
+      priceHtml = `<div class="price">${STEAM_RATE} ₽<span class="unit"> за 1 $</span></div>`;
+    } else {
+      const min = Math.min(...g.plans.map(p => p.price));
+      priceHtml = `<div class="price">${g.plans.length > 1 ? 'от ' : ''}${fmt(min)} ₽</div>`;
+    }
+
+    let action;
+    if (outOfStock) {
+      action = `<button class="add-btn" disabled style="opacity:.35">+</button>`;
+    } else if (single && qty > 0) {
+      action = `<div class="qty-control" data-id="${g.plans[0].id}"><button data-act="dec">−</button><span>${qty}</span><button data-act="inc">+</button></div>`;
+    } else if (single) {
+      action = `<button class="add-btn" data-add="${g.plans[0].id}">+</button>`;
+    } else {
+      // несколько вариантов (срок / тариф / сумма) — сначала выбираем в карточке товара
+      action = `<button class="add-btn" data-open="${g.id}">${qty > 0 ? qty : '+'}</button>`;
+    }
+
     return `
-    <div class="card" data-id="${p.id}">
-      ${p.badge ? `<div class="card-badge">${p.badge}</div>` : ''}
-      <div class="card-icon">${iconMarkup(p.icon)}</div>
-      <div class="card-name">${p.name}</div>
-      <div class="card-desc">${p.desc}</div>
-      ${stockBadge(p.id)}
+    <div class="card" data-id="${g.id}">
+      ${g.badge ? `<div class="card-badge">${g.badge}</div>` : ''}
+      <div class="card-icon">${iconMarkup(g.icon)}</div>
+      <div class="card-name">${g.name}</div>
+      <div class="card-desc">${g.desc}</div>
+      ${single ? stockBadge(g.plans[0].id) : ''}
       <div class="card-bottom">
-        <div class="price-block">
-          ${p.oldPrice ? `<div class="price-old">${fmt(p.oldPrice)} ₽</div>` : ''}
-          <div class="price">${fmt(p.price)} ₽<span class="unit">${p.unit||''}</span></div>
-        </div>
-        ${outOfStock
-          ? `<button class="add-btn" disabled style="opacity:.35">+</button>`
-          : qty > 0
-            ? `<div class="qty-control" data-id="${p.id}"><button data-act="dec">−</button><span>${qty}</span><button data-act="inc">+</button></div>`
-            : `<button class="add-btn" data-add="${p.id}">+</button>`}
+        <div class="price-block">${priceHtml}</div>
+        ${action}
       </div>
     </div>`;
   }
 
-  function renderTokenRow(t){
-    const qty = cart[t.id] || 0;
-    const outOfStock = stockCounts[t.id] === 0;
-    return `
-    <div class="token-row" data-id="${t.id}">
-      <div class="token-icon">${iconMarkup(t.icon)}</div>
-      <div class="token-info">
-        <div class="token-name">${t.name}</div>
-        <div class="token-meta">${t.meta}</div>
-        ${stockBadge(t.id)}
-      </div>
-      <div class="token-right">
-        <div class="price">${fmt(t.price)} ₽</div>
-        ${outOfStock
-          ? `<button class="add-btn" disabled style="opacity:.35">+</button>`
-          : qty > 0
-            ? `<div class="qty-control" data-id="${t.id}"><button data-act="dec">−</button><span>${qty}</span><button data-act="inc">+</button></div>`
-            : `<button class="add-btn" data-add="${t.id}">+</button>`}
-      </div>
-    </div>`;
-  }
-
-  function matchesQuery(item, q){
+  function matchesQuery(g, q){
     if (!q) return true;
-    const hay = (item.name + ' ' + (item.desc || item.meta || '')).toLowerCase();
+    const hay = (g.name + ' ' + g.desc + ' ' + (g.keywords || '')).toLowerCase();
     return hay.includes(q);
   }
 
   function renderShop(){
     const q = searchQuery.trim().toLowerCase();
-    const subs = PRODUCTS.filter(p => (p.cat === 'subs' || p.cat === 'tools') && matchesQuery(p, q));
-    const imgs = PRODUCTS.filter(p => p.cat === 'images' && matchesQuery(p, q));
-    const tokens = TOKENS.filter(t => matchesQuery(t, q));
+    const has = {};
+    SECTION_KEYS.forEach(key => {
+      const list = PRODUCTS.filter(g => g.cat === key && matchesQuery(g, q));
+      grids[key].innerHTML = list.map(renderCard).join('');
+      has[key] = list.length > 0;
+    });
 
-    subsGrid.innerHTML = subs.map(renderCard).join('');
-    tokensList.innerHTML = tokens.map(renderTokenRow).join('');
-    imagesGrid.innerHTML = imgs.map(renderCard).join('');
-
-    const sectionHasResults = { subs: subs.length > 0, tokens: tokens.length > 0, images: imgs.length > 0 };
     let anyVisible = false;
-
     document.querySelectorAll('[data-section]').forEach(sec => {
       const key = sec.dataset.section;
-      let show = true;
-      if (currentTab !== 'all') {
-        show = key === currentTab;
-        if (currentTab === 'tools') show = key === 'subs';
-      }
-      if (show && q && !sectionHasResults[key]) show = false;
+      const show = (currentTab === 'all' || key === currentTab) && has[key];
       if (show) anyVisible = true;
       sec.classList.toggle('hidden', !show);
     });
@@ -1136,7 +1360,7 @@
   function decFromCart(id){
     if (!cart[id]) return;
     cart[id] -= 1;
-    if (cart[id] <= 0) delete cart[id];
+    if (cart[id] <= 0) { delete cart[id]; delete customLines[id]; }
     onCartChange();
   }
   function incInCart(id){
@@ -1146,11 +1370,28 @@
   function cartCount(){
     return Object.values(cart).reduce((a,b)=>a+b,0);
   }
+  // Цена одной единицы: у обычных позиций из каталога, у Steam — введённая сумма
+  function unitPrice(id){
+    const item = ALL_ITEMS.find(i => i.id === id);
+    if (!item) return 0;
+    if (item.custom) return (customLines[id] && customLines[id].rub) || 0;
+    return item.price;
+  }
+  function cartItemName(id){
+    const item = ALL_ITEMS.find(i => i.id === id);
+    if (!item) return id;
+    if (item.custom) return `${item.name} · $${fmtUsd(unitPrice(id) / STEAM_RATE)}`;
+    return item.name;
+  }
+  function cartItemsPayload(){
+    return Object.entries(cart).map(([id, qty]) => {
+      const it = { id, qty };
+      if (id === STEAM_ID) it.rub = unitPrice(id);
+      return it;
+    });
+  }
   function cartTotal(){
-    return Object.entries(cart).reduce((sum,[id,qty]) => {
-      const item = ALL_ITEMS.find(i => i.id === id);
-      return sum + (item ? item.price*qty : 0);
-    }, 0);
+    return Object.entries(cart).reduce((sum,[id,qty]) => sum + unitPrice(id)*qty, 0);
   }
 
   function onCartChange(){
@@ -1192,15 +1433,18 @@
     }
     cartBody.innerHTML = entries.map(([id,qty]) => {
       const item = ALL_ITEMS.find(i => i.id === id);
+      if (!item) return '';
       return `
       <div class="cart-item">
         <div class="cart-item-icon">${iconMarkup(item.icon)}</div>
         <div class="cart-item-info">
-          <div class="cart-item-name">${item.name}</div>
-          <div class="cart-item-price">${fmt(item.price)} ₽ ${item.unit||''} × ${qty}</div>
+          <div class="cart-item-name">${cartItemName(id)}</div>
+          <div class="cart-item-price">${item.custom ? `${fmt(unitPrice(id))} ₽` : `${fmt(item.price)} ₽ × ${qty}`}</div>
         </div>
         <div class="qty-control" data-id="${id}">
-          <button data-act="dec">−</button><span>${qty}</span><button data-act="inc">+</button>
+          ${item.custom
+            ? `<button data-act="dec">✕</button>`
+            : `<button data-act="dec">−</button><span>${qty}</span><button data-act="inc">+</button>`}
         </div>
       </div>`;
     }).join('');
@@ -1227,7 +1471,7 @@
       return;
     }
 
-    const items = Object.entries(cart).map(([id, qty]) => ({ id, qty }));
+    const items = cartItemsPayload();
     const btn = document.getElementById('cardBtn');
     const label = btn ? btn.textContent : '';
     if (btn) { btn.disabled = true; btn.textContent = 'Создаём платёж…'; }
@@ -1245,6 +1489,8 @@
         if (data.error === 'out_of_stock' && Array.isArray(data.items)) {
           showToast('Нет в наличии: ' + data.items.map(i => `${i.name} (осталось ${i.available})`).join(', '));
           fetchStock();
+        } else if (data.error === 'invalid_amount') {
+          showToast(`Сумма пополнения Steam: от ${fmt(data.min)} до ${fmt(data.max)} ₽`);
         } else if (data.error === 'platega_not_configured') {
           showToast('Оплата картой пока не подключена');
         } else {
@@ -1294,12 +1540,17 @@
   async function checkout(){
     if (cartCount() === 0) return;
 
+    if (cart[STEAM_ID]) {
+      showToast('Пополнение Steam оплачивается картой / СБП');
+      return;
+    }
+
     if (!tg || !tg.initData || !tg.openInvoice) {
       showToast('Открой мини-апп внутри Telegram, чтобы оплатить');
       return;
     }
 
-    const items = Object.entries(cart).map(([id, qty]) => ({ id, qty }));
+    const items = cartItemsPayload();
     const checkoutBtn = document.getElementById('starsBtn');
     if (checkoutBtn) { checkoutBtn.disabled = true; checkoutBtn.textContent = 'Создаём счёт…'; }
 
@@ -1350,10 +1601,11 @@
   const detailBody = document.getElementById('detailBody');
 
   function openDetail(id){
-    const item = PRODUCTS.find(p => p.id === id);
-    if (!item) return;
-    selectedPlanIdx = 0;
-    renderDetail(item);
+    const g = PRODUCTS.find(p => p.id === id);
+    if (!g) return;
+    const firstFree = g.plans.findIndex(p => !isOut(p.id));
+    selectedPlanIdx = Math.max(0, firstFree);
+    renderDetail(g);
     detailOverlay.classList.add('open');
     detailSheet.classList.add('open');
   }
@@ -1362,36 +1614,186 @@
     detailSheet.classList.remove('open');
   }
 
-  function renderDetail(item){
-    const plans = item.plans || [{len:'Покупка',price:item.price}];
+  function renderDetail(g){
+    if (g.custom === 'steam') { renderSteamDetail(g); return; }
+    const plans = g.plans;
+    const unit = g.unit || '';
+    let lastTier = null;
+    const optionsHtml = plans.map((pl, i) => {
+      let head = '';
+      if (pl.tier && pl.tier !== lastTier) head = `<div class="plan-tier">${pl.tier}</div>`;
+      lastTier = pl.tier || null;
+      const out = isOut(pl.id);
+      return head + `
+        <div class="plan-opt ${i === selectedPlanIdx ? 'selected' : ''} ${out ? 'out' : ''}" data-idx="${i}">
+          <div class="p-len">${pl.len}</div>
+          <div class="p-price">${out ? 'Нет в наличии' : fmt(pl.price) + ' ₽'}</div>
+        </div>`;
+    }).join('');
+
     detailBody.innerHTML = `
-      <div class="detail-icon">${iconMarkup(item.icon)}</div>
-      <div class="detail-name">${item.name}</div>
-      <div class="detail-price">от ${fmt(Math.min(...plans.map(p=>p.price)))} ₽</div>
-      <div class="detail-desc">${item.desc}</div>
-      <div class="feature-list">
-        ${(item.features||[]).map(f => `<div class="feature-item"><span class="check">✓</span>${f}</div>`).join('')}
-      </div>
-      <div class="plan-options" id="planOptions">
-        ${plans.map((pl,i) => `
-          <div class="plan-opt ${i===0?'selected':''}" data-idx="${i}">
-            <div class="p-len">${pl.len}</div>
-            <div class="p-price">${fmt(pl.price)} ₽</div>
-          </div>`).join('')}
-      </div>
-      <button class="checkout-btn" id="detailAddBtn">Добавить в корзину</button>
+      <div class="detail-icon">${iconMarkup(g.icon)}</div>
+      <div class="detail-name">${g.name}</div>
+      <div class="detail-price" id="detailPrice"></div>
+      <div class="detail-desc">${g.desc}</div>
+      <div class="plan-options" id="planOptions">${optionsHtml}</div>
+      <button class="checkout-btn" id="detailAddBtn"></button>
     `;
+
+    const priceEl = document.getElementById('detailPrice');
+    const addBtn = document.getElementById('detailAddBtn');
+    function refresh(){
+      const pl = plans[selectedPlanIdx];
+      priceEl.textContent = `${fmt(pl.price)} ₽${unit}`;
+      addBtn.textContent = `Добавить в корзину · ${fmt(pl.price)} ₽`;
+      addBtn.disabled = isOut(pl.id);
+    }
+    refresh();
+
     document.querySelectorAll('#planOptions .plan-opt').forEach(el => {
       el.addEventListener('click', () => {
-        document.querySelectorAll('#planOptions .plan-opt').forEach(o=>o.classList.remove('selected'));
+        const idx = Number(el.dataset.idx);
+        if (isOut(plans[idx].id)) return;
+        document.querySelectorAll('#planOptions .plan-opt').forEach(o => o.classList.remove('selected'));
         el.classList.add('selected');
-        selectedPlanIdx = Number(el.dataset.idx);
+        selectedPlanIdx = idx;
+        refresh();
       });
     });
-    document.getElementById('detailAddBtn').addEventListener('click', () => {
-      addToCart(item.id);
+    addBtn.addEventListener('click', () => {
+      addToCart(plans[selectedPlanIdx].id);   // в корзину уходит именно выбранный вариант
       closeDetail();
     });
+  }
+
+  // ---------- Steam: умный калькулятор ($ <-> ₽) ----------
+  function renderSteamDetail(g){
+    const prev = cart[STEAM_ID] ? unitPrice(STEAM_ID) : 0;
+    let mode = (prev && prev % STEAM_RATE !== 0) ? 'rub' : 'usd';
+    let pendingRub = 0;
+
+    detailBody.innerHTML = `
+      <div class="detail-icon">${iconMarkup(g.icon)}</div>
+      <div class="detail-name">${g.name}</div>
+      <div class="detail-price">1 $ = ${STEAM_RATE} ₽</div>
+      <div class="detail-desc">${g.desc}</div>
+      <div class="calc">
+        <div class="calc-mode" id="calcMode">
+          <div class="calc-mode-opt" data-mode="usd">В долларах</div>
+          <div class="calc-mode-opt" data-mode="rub">В рублях</div>
+        </div>
+        <div class="calc-field">
+          <span class="calc-cur" id="calcCur"></span>
+          <input id="calcInput" type="text" inputmode="decimal" autocomplete="off">
+        </div>
+        <div class="calc-chips" id="calcChips"></div>
+        <div class="calc-result">
+          <div class="calc-row"><span>Придёт на Steam</span><b id="calcGet">—</b></div>
+          <div class="calc-row total"><span>К оплате</span><b id="calcPay">—</b></div>
+        </div>
+        <div class="calc-hint" id="calcHint"></div>
+      </div>
+      <button class="checkout-btn" id="detailAddBtn" disabled>Введите сумму</button>
+    `;
+
+    const input = document.getElementById('calcInput');
+    const cur = document.getElementById('calcCur');
+    const chips = document.getElementById('calcChips');
+    const getEl = document.getElementById('calcGet');
+    const payEl = document.getElementById('calcPay');
+    const hint = document.getElementById('calcHint');
+    const addBtn = document.getElementById('detailAddBtn');
+    const baseHint = `Минимум ${fmt(STEAM_MIN_RUB)} ₽ (≈ $${fmtUsd(STEAM_MIN_RUB / STEAM_RATE)}). Логин Steam попросим в чате с поддержкой после оплаты.`;
+
+    function setMode(m){
+      mode = m;
+      document.querySelectorAll('#calcMode .calc-mode-opt').forEach(o => o.classList.toggle('active', o.dataset.mode === m));
+      cur.textContent = m === 'usd' ? '$' : '₽';
+      input.placeholder = m === 'usd' ? 'Сколько долларов? Например, 3' : 'Сколько рублей? Например, 500';
+      const list = m === 'usd' ? [1, 3, 5, 10, 20, 50] : [100, 300, 500, 1000, 2000, 5000];
+      chips.innerHTML = list.map(v => `<div class="calc-chip" data-v="${v}">${m === 'usd' ? '$' + v : fmt(v) + ' ₽'}</div>`).join('');
+    }
+
+    function sanitize(){
+      let v = input.value.replace(/,/g, '.').replace(/[^\d.]/g, '');
+      const dot = v.indexOf('.');
+      if (mode === 'rub') {
+        v = dot === -1 ? v : v.slice(0, dot);          // рубли — только целые
+      } else if (dot !== -1) {
+        v = v.slice(0, dot + 1) + v.slice(dot + 1).replace(/\./g, '').slice(0, 2); // доллары — до 2 знаков
+      }
+      v = v.replace(/^0+(?=\d)/, '');
+      if (v !== input.value) input.value = v;
+      return (v === '' || v === '.') ? NaN : parseFloat(v);
+    }
+
+    function recalc(){
+      const v = sanitize();
+      pendingRub = 0;
+      hint.classList.remove('bad');
+      hint.textContent = baseHint;
+      getEl.textContent = '—';
+      payEl.textContent = '—';
+      addBtn.disabled = true;
+      addBtn.textContent = 'Введите сумму';
+      if (isNaN(v) || v <= 0) return;
+
+      let rub, usd;
+      if (mode === 'usd') { usd = v; rub = Math.ceil(Math.round(v * STEAM_RATE * 100) / 100); }
+      else { rub = Math.round(v); usd = rub / STEAM_RATE; }
+
+      getEl.textContent = '$' + fmtUsd(Math.round(usd * 100) / 100);
+      payEl.textContent = fmt(rub) + ' ₽';
+
+      if (rub < STEAM_MIN_RUB) {
+        hint.classList.add('bad');
+        hint.textContent = `Минимальная сумма — ${fmt(STEAM_MIN_RUB)} ₽ (≈ $${fmtUsd(STEAM_MIN_RUB / STEAM_RATE)})`;
+        addBtn.textContent = `Минимум ${fmt(STEAM_MIN_RUB)} ₽`;
+        return;
+      }
+      if (rub > STEAM_MAX_RUB) {
+        hint.classList.add('bad');
+        hint.textContent = `Максимум ${fmt(STEAM_MAX_RUB)} ₽ за один заказ`;
+        addBtn.textContent = 'Слишком большая сумма';
+        return;
+      }
+      pendingRub = rub;
+      addBtn.disabled = false;
+      addBtn.textContent = (cart[STEAM_ID] ? 'Обновить в корзине' : 'Добавить в корзину') + ` · ${fmt(rub)} ₽`;
+    }
+
+    document.getElementById('calcMode').addEventListener('click', (e) => {
+      const opt = e.target.closest('.calc-mode-opt');
+      if (!opt || opt.dataset.mode === mode) return;
+      const rubNow = pendingRub;           // переносим уже введённую сумму в другую валюту
+      setMode(opt.dataset.mode);
+      if (rubNow) {
+        input.value = mode === 'rub' ? String(rubNow) : String(Math.round((rubNow / STEAM_RATE) * 100) / 100);
+      } else {
+        input.value = '';
+      }
+      recalc();
+    });
+    chips.addEventListener('click', (e) => {
+      const chip = e.target.closest('.calc-chip');
+      if (!chip) return;
+      input.value = chip.dataset.v;
+      recalc();
+    });
+    input.addEventListener('input', recalc);
+    addBtn.addEventListener('click', () => {
+      if (!pendingRub) return;
+      cart[STEAM_ID] = 1;
+      customLines[STEAM_ID] = { rub: pendingRub };
+      onCartChange();
+      showToast('Добавлено в корзину');
+      try { if (tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light'); } catch(e){}
+      closeDetail();
+    });
+
+    setMode(mode);
+    if (prev) input.value = mode === 'rub' ? String(prev) : String(prev / STEAM_RATE);
+    recalc();
   }
 
   // ---------------- TOAST ----------------
@@ -1460,6 +1862,9 @@
     const addBtn = e.target.closest('[data-add]');
     if (addBtn) { addToCart(addBtn.dataset.add); return; }
 
+    const openBtn = e.target.closest('[data-open]');
+    if (openBtn) { openDetail(openBtn.dataset.open); return; }
+
     const qtyBtn = e.target.closest('.qty-control button');
     if (qtyBtn) {
       const wrap = qtyBtn.closest('.qty-control');
@@ -1499,7 +1904,7 @@
       return;
     }
 
-    const card = e.target.closest('.card, .token-row');
+    const card = e.target.closest('.card');
     if (card) openDetail(card.dataset.id);
   });
 
