@@ -137,9 +137,9 @@
   .legal-footer a:hover{ color: var(--accent); }
 
   .verify-badge{
-    background: var(--accent); color: var(--accent-ink);
-    text-align:center; font-weight:900; font-size:14px; letter-spacing:0.02em;
-    padding:9px 12px; position:relative; z-index:1;
+    color: var(--text-faint);
+    text-align:center; font-weight:700; font-size:11px; letter-spacing:0.02em;
+    padding:2px 12px 0; position:relative; z-index:1;
   }
 
   /* ---------- Search / tabs ---------- */
@@ -217,8 +217,26 @@
   .promo-title{ font-family: var(--font-display); font-size:19px; font-weight:900; margin-bottom:4px; letter-spacing:-0.01em; }
   .promo-sub{ font-size:12.5px; color: var(--text-dim); max-width:80%; line-height:1.4; }
 
+  /* ---------- Как купить ---------- */
+  .how{
+    margin: 12px 18px 0;
+    display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;
+    position:relative; z-index:1;
+  }
+  .how-step{
+    display:flex; align-items:center; gap:7px;
+    background: var(--bg-raise); border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md); padding: 8px 9px;
+    font-size:11.5px; line-height:1.25; color: var(--text-dim); font-weight:600;
+  }
+  .how-step b{
+    flex:none; width:20px; height:20px; border-radius:50%;
+    display:grid; place-items:center;
+    background: var(--accent); color: var(--accent-ink); font-size:11px; font-weight:900;
+  }
+
   /* ---------- Section ---------- */
-  .section{ padding: 22px 18px 4px; position:relative; z-index:1; }
+  .section{ padding: 18px 18px 4px; position:relative; z-index:1; }
   .section-head{
     display:flex; align-items:baseline; justify-content:space-between;
     margin-bottom:12px;
@@ -596,11 +614,6 @@
 <body>
 <div id="app">
 
-  <div class="announce" id="announceBar">
-    🔥 <span>Скидка 10% при первом заказе</span> <span class="dim">· промокод AISTART</span>
-    <span class="announce-close" id="announceClose">✕</span>
-  </div>
-
   <div class="topbar">
     <div class="brand">
       <div class="logo">
@@ -626,10 +639,10 @@
 
     <div class="tabs" id="tabs"></div>
 
-    <div class="promo">
-      <div class="promo-eyebrow">Предложение недели</div>
-      <div class="promo-title">−20% на первую подписку</div>
-      <div class="promo-sub">Промокод AISTART при оформлении заказа</div>
+    <div class="how" id="howTo">
+      <div class="how-step"><b>1</b><span>Выберите тариф</span></div>
+      <div class="how-step"><b>2</b><span>Оплатите картой, СБП, ⭐</span></div>
+      <div class="how-step"><b>3</b><span>Получите в&nbsp;чате с&nbsp;ботом</span></div>
     </div>
 
     <div id="catalog"></div>
@@ -854,27 +867,27 @@
       "plans": [
         {
           "id": "gpt-go",
-          "len": "Go",
+          "len": "Go · 1 мес.",
           "price": 490
         },
         {
           "id": "gpt-plus",
-          "len": "Plus",
+          "len": "Plus · 1 мес.",
           "price": 1650
         },
         {
           "id": "gpt-pro5",
-          "len": "Pro 5x",
+          "len": "Pro 5x · 1 мес.",
           "price": 8650
         },
         {
           "id": "gpt-pro20",
-          "len": "Pro 20x",
+          "len": "Pro 20x · 1 мес.",
           "price": 13500
         },
         {
           "id": "gpt-pro50",
-          "len": "Pro 50x",
+          "len": "Pro 50x · 1 мес.",
           "price": 41990
         }
       ]
@@ -889,9 +902,9 @@
       "plans": [
         {
           "id": "claude-pro",
-          "len": "Pro",
+          "len": "Pro · 1 мес.",
           "price": 1890,
-          "name": "Claude Pro"
+          "name": "Claude Pro · 1 мес."
         }
       ]
     },
@@ -1089,17 +1102,11 @@
     return BRAND_ICONS[icon] || icon;
   }
 
-  const ACTIVE_SUBS = [
-    { id:'gpt-plus', started:'28 авг', daysLeft:25, totalDays:30 },
-    { id:'spotify-ind-1m', started:'15 авг', daysLeft:8, totalDays:30 },
-  ];
+  // Реальные активные подписки пока не считаются — без демо-данных, чтобы
+  // покупатель не видел чужие подписки.
+  const ACTIVE_SUBS = [];
 
-  const ORDER_HISTORY = [
-    { id:'gpt-go', date:'20 авг 2026', price:490, status:'done' },
-    { id:'xbox-3m', date:'3 июл 2026', price:1999, status:'expired' },
-    { id:'claude-pro', date:'28 июн 2026', price:1890, status:'done' },
-    { id:'capcut-1m', date:'12 май 2026', price:299, status:'expired' },
-  ];
+  const ORDER_HISTORY = [];
 
   // ---------------- STATE ----------------
   let cart = {};
@@ -1144,7 +1151,7 @@
         ? `<div class="qty-control" data-id="${pl.id}"><button data-act="dec">−</button><span>${qty}</span><button data-act="inc">+</button></div>`
         : `<button class="add-btn" data-add="${pl.id}">+</button>`;
     return `
-    <div class="card" data-sku="${pl.id}">
+    <div class="card" data-id="${g.id}" data-sku="${pl.id}">
       <div class="card-icon">${iconMarkup(g.icon)}</div>
       <div class="card-name">${planName(g, pl)}</div>
       ${stockBadge(pl.id)}
@@ -1198,7 +1205,7 @@
     });
     catalogEl.innerHTML = html;
     document.getElementById('searchEmpty').classList.toggle('hidden', anyVisible);
-    document.querySelector('.promo').classList.toggle('hidden', !!q);
+    document.getElementById('howTo').classList.toggle('hidden', !!q);
   }
 
   // ---------------- RENDER: ORDERS ----------------
@@ -1583,11 +1590,12 @@
   const detailSheet = document.getElementById('detailSheet');
   const detailBody = document.getElementById('detailBody');
 
-  function openDetail(id){
+  function openDetail(id, sku){
     const g = PRODUCTS.find(p => p.id === id);
     if (!g) return;
     const firstFree = g.plans.findIndex(p => !isOut(p.id));
-    selectedPlanIdx = Math.max(0, firstFree);
+    const skuIdx = sku ? g.plans.findIndex(p => p.id === sku) : -1;
+    selectedPlanIdx = skuIdx >= 0 ? skuIdx : Math.max(0, firstFree);
     renderDetail(g);
     detailOverlay.classList.add('open');
     detailSheet.classList.add('open');
@@ -1620,6 +1628,7 @@
       <div class="detail-price" id="detailPrice"></div>
       <div class="detail-desc">${g.desc}</div>
       <div class="plan-options" id="planOptions">${optionsHtml}</div>
+      <div class="detail-desc">После оплаты товар автоматически придёт в чат с ботом.</div>
       <button class="checkout-btn" id="detailAddBtn"></button>
     `;
 
@@ -1813,10 +1822,6 @@
   }
 
   // ---------------- EVENTS ----------------
-  document.getElementById('announceClose').addEventListener('click', () => {
-    document.getElementById('announceBar').classList.add('hidden');
-  });
-
   document.getElementById('tabs').addEventListener('click', (e) => {
     const tab = e.target.closest('.tab');
     if (!tab) return;
@@ -1888,7 +1893,7 @@
     }
 
     const card = e.target.closest('.card');
-    if (card) openDetail(card.dataset.id);
+    if (card) openDetail(card.dataset.id, card.dataset.sku);
   });
 
   // ---------- Пополнение баланса ----------
